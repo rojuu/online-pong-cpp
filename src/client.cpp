@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "SDL.h"
+#include "SDL_net.h"
+
+const Uint16 PORT = 3000;
+TCPsocket socket;
 
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
@@ -8,24 +12,93 @@ SDL_Window* window;
 
 struct Vector2 { float x, y; };
 
+int IpStringToNumber(const char* DottedQuad, Uint32 *    IpAddr)
+{
+	Uint32            byte3;
+	Uint32            byte2;
+	Uint32            byte1;
+	Uint32            byte0;
+	char              dummyString[2];
+
+	/* The dummy string with specifier %1s searches for a non-whitespace char
+	* after the last number. If it is found, the result of sscanf will be 5
+	* instead of 4, indicating an erroneous format of the ip-address.
+	*/
+	if (sscanf_s(DottedQuad, "%u.%u.%u.%u%1s",
+		&byte3, &byte2, &byte1, &byte0, dummyString) == 4)
+	{
+		if ((byte3 < 256)
+			&& (byte2 < 256)
+			&& (byte1 < 256)
+			&& (byte0 < 256)
+			)
+		{
+			*IpAddr = (byte3 << 24)
+				+ (byte2 << 16)
+				+ (byte1 << 8)
+				+ byte0;
+
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 void LogSDLError(const char* message)
 {
 	printf("%s, SDLError: %s\n", message, SDL_GetError());
 }
 
+void LogSDLNetError(const char* message)
+{
+	printf("%s, SDLNetError: %s\n", message, SDLNet_GetError());
+}
+
 void ExitCleanUp()
 {
+	SDLNet_TCP_Close(socket);
+	SDLNet_Quit();
 	SDL_DestroyWindow(window);
 	SDL_Quit();
+	system("pause");
 }
 
 int main(int argc, char** argv)
 {
-	atexit(ExitCleanUp);
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+	char message[1024];
+	int len;
+	IPaddress ip;
+	if (IpStringToNumber("127.0.0.1", &ip.host) != 0)
 	{
-		LogSDLError("SDL couldn't be initialized");
+		printf("IpAddress parsing failed.\n");
 		return 1;
+	}
+
+	atexit(ExitCleanUp);
+	if (SDL_Init(SDL_INIT_VIDEO) == -1)
+	{
+		LogSDLError("SDL_Init");
+		return 2;
+	}
+
+	if (SDLNet_Init() == -1)
+	{
+		LogSDLError("SDLNet_Init");
+		return 3;
+	}
+
+	if (SDLNet_ResolveHost(&ip, NULL, PORT) == -1)
+	{
+		LogSDLNetError("SDLNet_ResolveHost");
+		return 4;
+	}
+
+	socket = SDLNet_TCP_Open(&ip);
+	if (!socket)
+	{
+		LogSDLNetError("SDLNet_TCP_Open");
+		return 5;
 	}
 
 	window = SDL_CreateWindow("Pong",
@@ -34,15 +107,15 @@ int main(int argc, char** argv)
 		SDL_WINDOW_SHOWN);
 	if (window == NULL)
 	{
-		LogSDLError("Window couldn't be loaded");
-		return 2;
+		LogSDLError("SDL_CreateWindow");
+		return 6;
 	}
 	
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	if (renderer == NULL)
 	{
-		LogSDLError("Renderer couldn't be loaded");
-		return 3;
+		LogSDLError("SDL_CreateRenderer");
+		return 7;
 	}
 
 	SDL_Event e;
@@ -93,7 +166,7 @@ int main(int argc, char** argv)
 			}
 		}
 		
-		printf("FPS: %f\n", 1/DeltaTime);
+		//printf("FPS: %f\n", 1/DeltaTime);
 
 		//RENDERING
 		{
