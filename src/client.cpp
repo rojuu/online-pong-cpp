@@ -29,7 +29,6 @@ void ExitCleanUp()
 	SDLNet_Quit();
 	SDL_DestroyWindow(window);
 	SDL_Quit();
-	system("pause");
 }
 
 int main(int argc, char** argv)
@@ -39,6 +38,7 @@ int main(int argc, char** argv)
 	char message[1024];
 	int length;
 	IPaddress ip;
+	bool hasConnection = true;
 
 	//INIT
 	if (SDL_Init(SDL_INIT_VIDEO) == -1)
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 	if (!socket)
 	{
 		LogSDLNetError("SDLNet_TCP_Open");
-		return 4;
+		hasConnection = false;
 	}
 
 	window = SDL_CreateWindow("Pong",
