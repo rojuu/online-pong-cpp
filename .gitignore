@@ -1,7 +1,10 @@
 .vs/
-Debug/
-Release/
+[Dd]ebug/
+[Rr]elease/
+[Bb]uild/
+[Bb]in/
 *.VC.db
 *.sln
 *.vcxproj
 *.vcxproj.*
+*.bat
