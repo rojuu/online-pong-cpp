@@ -3,7 +3,7 @@
 #include "SDL.h"
 #include "SDL_net.h"
 
-const Uint16 PORT = 3000;
+const Uint16 PORT = 8080;
 
 void LogSDLError(const char* message)
 {
@@ -82,20 +82,24 @@ int main(int argc, char** argv)
 			ipaddr & 0xff,
 			remoteip->port);
 
-		len = SDLNet_TCP_Recv(client, message, 1024);
-		SDLNet_TCP_Close(client);
-		if (!len)
+		while (true)
 		{
-			LogSDLNetError("SDLNet_TCP_Recv");
-			continue;
-		}
+			len = SDLNet_TCP_Recv(client, message, 1024);
+			if (!len)
+			{
+				LogSDLNetError("SDLNet_TCP_Recv");
+				continue;
+			}
 
-		printf("Received: %.*s\n", len, message);
+			printf("Received: %.*s\n", len, message);
 
-		if (message[0] == 'Q')
-		{
-			printf("Quitting on a Q received\n");
-			break;
+			if (message[0] == 'Q')
+			{
+				printf("Quitting on a Q received\n");
+				SDLNet_TCP_Close(client);
+				quit = true;
+				break;
+			}
 		}
 	}
 
