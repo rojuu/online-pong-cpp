@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h> 
+#include "client.h"
 #include <enet/enet.h>
 #include "SDL.h"
-//#include "SDL_net.h"
+#include "logging.h"
+
 
 const char* HOST = "127.0.0.1";
 const Uint16 PORT = 8080;
@@ -16,59 +17,31 @@ SDL_Window* window;
 
 struct Vector2 { float x, y; };
 
-void LogSDLError(const char* message)
-{
-	printf("%s, SDLError: %s\n", message, SDL_GetError());
-}
-
 //void LogSDLNetError(const char* message)
 //{
 //	printf("%s, SDLNetError: %s\n", message, SDLNet_GetError());
 //}
 
-void DebugLog(const char* message, ...)
-{
-	va_list v;
-	va_start(v, message);
-	char buffer[1024];
-	vsprintf(buffer, message, v);
-	printf("%s\n", buffer);
-	va_end(v);
-}
 
-void ExitCleanUp()
+void client_ExitCleanUp()
 {
 	//SDLNet_TCP_Close(socket);
 	//SDLNet_Quit();
 	enet_host_destroy(client);
 	enet_deinitialize();
 	SDL_DestroyWindow(window);
-	SDL_Quit();
 }
 
-int main(int argc, char** argv)
+int run_client(int argc, char** argv)
 {
-	atexit(ExitCleanUp);
+	atexit(client_ExitCleanUp);
 
 	/*int length;
 	IPaddress ip;*/
 	bool hasConnection = true;
-	
+
 	float pos = 0.134f;
 
-	//INIT
-	if (SDL_Init(SDL_INIT_VIDEO) == -1)
-	{
-		LogSDLError("SDL_Init");
-		return 1;
-	}
-
-	if (enet_initialize() != 0)
-	{
-		fprintf(stderr, "An error occurred while initializing ENet.\n");
-		hasConnection = false;
-	}
-	
 	client = enet_host_create(NULL /* create a client host */,
 		1 /* only allow 1 outgoing connection */,
 		2 /* allow up 2 channels to be used, 0 and 1 */,
@@ -77,29 +50,9 @@ int main(int argc, char** argv)
 
 	if (client == NULL)
 	{
-		fprintf(stderr,
-			"An error occurred while trying to create an ENet client host.\n");
+		DebugLog("An error occurred while trying to create an ENet client host.");
 		hasConnection = false;
 	}
-
-	/*if (SDLNet_Init() == -1)
-	{
-		LogSDLError("SDLNet_Init");
-		hasConnection = false;
-	}
-
-	if (SDLNet_ResolveHost(&ip, HOST, PORT) == -1)
-	{
-		LogSDLNetError("SDLNet_ResolveHost");
-		hasConnection = false;
-	}
-
-	socket = SDLNet_TCP_Open(&ip);
-	if (!socket)
-	{
-		LogSDLNetError("SDLNet_TCP_Open");
-		hasConnection = false;
-	}*/
 
 	window = SDL_CreateWindow("Pong",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -110,7 +63,7 @@ int main(int argc, char** argv)
 		LogSDLError("SDL_CreateWindow");
 		return 2;
 	}
-	
+
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	if (renderer == NULL)
 	{
@@ -125,7 +78,7 @@ int main(int argc, char** argv)
 	const int paddleWidth = 6;
 	const int paddleHeight = 60;
 	const int paddleOffset = 20;
-	
+
 	const int ballWidth = 6;
 	const int ballHeight = ballWidth;
 
@@ -149,7 +102,7 @@ int main(int argc, char** argv)
 	float LastTime = 0;
 	float DeltaTime = 0;
 	float NetworkRate = 66; //How many messages per second
-	float TimeFromLastMessage = 1/NetworkRate;
+	float TimeFromLastMessage = 1 / NetworkRate;
 
 	//MAIN LOOP
 	while (!quit)
@@ -176,23 +129,10 @@ int main(int argc, char** argv)
 		}
 
 		//NETWORK MESSAGE
-		if (hasConnection && TimeFromLastMessage > 1/NetworkRate)
+		if (hasConnection && TimeFromLastMessage > 1 / NetworkRate)
 		{
 			//Do stuff
 		}
-
-		////NETWORK MESSAGE
-		//if (hasConnection && TimeFromLastMessage > 1/NetworkRate)
-		//{
-		//	DebugLog("TimeFromStart: %f", TimeFromStart);
-		//	char* buffer = (char*)malloc(sizeof(float));
-		//	*buffer = (char)TimeFromStart;
-		//	int result = SDLNet_TCP_Send(socket, buffer, sizeof(float));
-		//	if (result < sizeof(float))
-		//	{
-		//		LogSDLNetError("SDLNet_TCP_Send");
-		//	}
-		//}
 
 		//RENDERING
 		{
@@ -200,7 +140,7 @@ int main(int argc, char** argv)
 #define WHITE 0xFF, 0xFF, 0xFF, 0xFF
 #define BLACK 0x00, 0x00, 0x00, 0xFF
 
-			//Clear screen
+		//Clear screen
 			SDL_SetRenderDrawColor(renderer, BLACK);
 			SDL_RenderClear(renderer);
 
@@ -238,6 +178,6 @@ int main(int argc, char** argv)
 			SDL_RenderPresent(renderer);
 		} //END RENDERING
 	}
-	
+
 	return 0;
 }
