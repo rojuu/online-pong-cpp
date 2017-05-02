@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "client.h"
 #include <enet/enet.h>
 #include "SDL.h"
@@ -8,8 +9,8 @@
 
 const char* HOST = "127.0.0.1";
 const Uint16 PORT = 8080;
-//TCPsocket socket;
 ENetHost * client;
+ENetPeer * server;
 
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
@@ -17,31 +18,66 @@ SDL_Window* window;
 
 struct Vector2 { float x, y; };
 
-//void LogSDLNetError(const char* message)
-//{
-//	printf("%s, SDLNetError: %s\n", message, SDLNet_GetError());
-//}
-
-
+bool runNetwork = true;
 void client_ExitCleanUp()
 {
-	//SDLNet_TCP_Close(socket);
-	//SDLNet_Quit();
+	runNetwork = false;
 	enet_host_destroy(client);
 	enet_deinitialize();
 	SDL_DestroyWindow(window);
 }
 
+static int network_t(void *ptr)
+{
+	//NETWORK MESSAGE
+#if 1
+	ENetEvent event;
+	int eventStatus;
+	while (runNetwork)
+	{
+		eventStatus = enet_host_service(client, &event, 3000);
+		DebugLog("Receiving shit");
+		if (eventStatus > 0)
+		{
+			switch (event.type) {
+			case ENET_EVENT_TYPE_CONNECT:
+				DebugLog("A new connection from %x:%u",
+					event.peer->address.host,
+					event.peer->address.port);
+				break;
+
+			case ENET_EVENT_TYPE_RECEIVE:
+				DebugLog("Message from server : %s", event.packet->data);
+				// Lets broadcast this message to all
+				// enet_host_broadcast(client, 0, event.packet);
+				enet_packet_destroy(event.packet);
+				break;
+
+			case ENET_EVENT_TYPE_DISCONNECT:
+				DebugLog("%s disconnected.", event.peer->data);
+				// Reset client's information
+				event.peer->data = NULL;
+				break;
+			}
+		}
+		/*if (strlen(message) > 0) {
+		ENetPacket *packet = enet_packet_create(message, strlen(message) + 1, ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(server, 0, packet);
+		}*/
+	}
+#endif
+	//NETWORK MESSAGE END
+	return 0;
+}
+
 int run_client(int argc, char** argv)
 {
+	ENetAddress address;
 	atexit(client_ExitCleanUp);
+	SDL_Thread *network_thread;
 
-	/*int length;
-	IPaddress ip;*/
 	bool hasConnection = true;
-
-	float pos = 0.134f;
-
+	
 	client = enet_host_create(NULL /* create a client host */,
 		1 /* only allow 1 outgoing connection */,
 		2 /* allow up 2 channels to be used, 0 and 1 */,
@@ -54,6 +90,16 @@ int run_client(int argc, char** argv)
 		hasConnection = false;
 	}
 
+	enet_address_set_host(&address, "localhost");
+	address.port = PORT;
+
+	server = enet_host_connect(client, &address, 2, 0);
+
+	if (server == NULL) {
+		DebugLog("No available peers for initializing an ENet connection");
+		hasConnection = false;
+	}
+
 	window = SDL_CreateWindow("Pong",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		SCREEN_WIDTH, SCREEN_HEIGHT,
@@ -61,17 +107,21 @@ int run_client(int argc, char** argv)
 	if (window == NULL)
 	{
 		LogSDLError("SDL_CreateWindow");
-		return 2;
+		return 1;
 	}
 
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	if (renderer == NULL)
 	{
 		LogSDLError("SDL_CreateRenderer");
-		return 3;
+		return 2;
 	}
 
-	//INIT VARIABLES
+	if (hasConnection)
+	{
+		network_thread = SDL_CreateThread(network_t, "NetworkThread", (void*)NULL);
+	}
+	
 	SDL_Event e;
 	bool quit = false;
 
@@ -104,7 +154,8 @@ int run_client(int argc, char** argv)
 	float NetworkRate = 66; //How many messages per second
 	float TimeFromLastMessage = 1 / NetworkRate;
 
-	//MAIN LOOP
+//MAIN LOOP
+#if 1
 	while (!quit)
 	{
 		LastTime = CurrentTime;
@@ -128,56 +179,52 @@ int run_client(int argc, char** argv)
 			}
 		}
 
-		//NETWORK MESSAGE
-		if (hasConnection && TimeFromLastMessage > 1 / NetworkRate)
-		{
-			//Do stuff
-		}
-
-		//RENDERING
-		{
-			// Color defines
+//RENDERING
+#if 1
+		// Color defines
 #define WHITE 0xFF, 0xFF, 0xFF, 0xFF
 #define BLACK 0x00, 0x00, 0x00, 0xFF
 
 		//Clear screen
-			SDL_SetRenderDrawColor(renderer, BLACK);
-			SDL_RenderClear(renderer);
+		SDL_SetRenderDrawColor(renderer, BLACK);
+		SDL_RenderClear(renderer);
 
-			//Render paddles
-			SDL_SetRenderDrawColor(renderer, WHITE);
-			for (size_t i = 0; i < paddleCount; i++)
-			{
-				paddleRect = &paddleRects[i];
-				paddleRect->w = paddleWidth;
-				paddleRect->h = paddleHeight;
-				paddleRect->x = paddleOffset - paddleWidth / 2 + (SCREEN_WIDTH - paddleOffset * 2) * i;
-				paddleRect->y = paddleYs[i] - paddleHeight / 2;
+		//Render paddles
+		SDL_SetRenderDrawColor(renderer, WHITE);
+		for (size_t i = 0; i < paddleCount; i++)
+		{
+			paddleRect = &paddleRects[i];
+			paddleRect->w = paddleWidth;
+			paddleRect->h = paddleHeight;
+			paddleRect->x = paddleOffset - paddleWidth / 2 + (SCREEN_WIDTH - paddleOffset * 2) * i;
+			paddleRect->y = paddleYs[i] - paddleHeight / 2;
 
-				SDL_RenderFillRect(renderer, paddleRect);
-			}
+			SDL_RenderFillRect(renderer, paddleRect);
+		}
 
-			//Render ball
-			SDL_SetRenderDrawColor(renderer, WHITE);
-			{
-				ballRect.w = ballWidth;
-				ballRect.h = ballHeight;
-				ballRect.x = ballPosition.x - ballWidth / 2;
-				ballRect.y = ballPosition.y - ballHeight / 2;
+		//Render ball
+		SDL_SetRenderDrawColor(renderer, WHITE);
+		{
+			ballRect.w = ballWidth;
+			ballRect.h = ballHeight;
+			ballRect.x = ballPosition.x - ballWidth / 2;
+			ballRect.y = ballPosition.y - ballHeight / 2;
 
-				SDL_RenderFillRect(renderer, &ballRect);
-			}
+			SDL_RenderFillRect(renderer, &ballRect);
+		}
 
-			//Draw vertical line of dots
-			SDL_SetRenderDrawColor(renderer, WHITE);
-			for (int i = 2; i < SCREEN_HEIGHT; i += 4)
-			{
-				SDL_RenderDrawPoint(renderer, SCREEN_WIDTH / 2, i);
-			}
+		//Draw vertical line of dots
+		SDL_SetRenderDrawColor(renderer, WHITE);
+		for (int i = 2; i < SCREEN_HEIGHT; i += 4)
+		{
+			SDL_RenderDrawPoint(renderer, SCREEN_WIDTH / 2, i);
+		}
 
-			SDL_RenderPresent(renderer);
-		} //END RENDERING
+		SDL_RenderPresent(renderer);
+#endif	
+//END RENDERING
 	}
-
+#endif
+//MAIN LOOP END
 	return 0;
 }

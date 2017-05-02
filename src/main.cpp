@@ -36,13 +36,14 @@ int main(int argc, char** argv)
 	if (SDL_Init(0) == -1)
 	{
 		LogSDLError("SDL_Init");
-		return 1;
+		return -1;
 	}
 
 	if (enet_initialize() != 0)
 	{
 		DebugLog("An error occurred while initializing ENet.");
-		return 2;
+		if(isServer)
+			return -2;
 	}
 
 	int ret = 0;

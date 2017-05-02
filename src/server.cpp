@@ -8,20 +8,18 @@
 
 const Uint16 PORT = 8080;
 
-ENetAddress address;
-ENetHost * server;
+ENetHost *server;
 
 void server_ExitCleanUp()
 {
-	//SDLNet_TCP_Close(client);
-	//SDLNet_TCP_Close(server);
-	//SDLNet_Quit();
 	enet_host_destroy(server);
 	enet_deinitialize();
 }
 
 int run_server(int argc, char** argv)
 {
+	ENetAddress address;
+	ENetPeer client = { 0 };
 	atexit(server_ExitCleanUp);
 
 	/* Bind the server to the default localhost.     */
@@ -38,13 +36,59 @@ int run_server(int argc, char** argv)
 	if (server == NULL)
 	{
 		DebugLog("An error occurred while trying to create an ENet server host.");
-		return 3;
+		return 1;
 	}
 
+	ENetEvent event;
+	int eventStatus = 1;
+
+	Uint32 ticks = SDL_GetTicks();
+	
 	DebugLog("Listening to port*%u", PORT);
 	while (1)
 	{
-		SDL_Delay(100);
+		eventStatus = enet_host_service(server, &event, 1000);
+
+		if (eventStatus > 0)
+		{
+			switch (event.type) {
+				case ENET_EVENT_TYPE_CONNECT:
+					DebugLog("A new connection from %x:%u",
+						event.peer->address.host,
+						event.peer->address.port);
+					client = *event.peer;
+					break;
+
+				case ENET_EVENT_TYPE_RECEIVE:
+					printf("A packet of length %u containing %s was received from %s on channel %u.",
+						event.packet->dataLength,
+						event.packet->data,
+						event.peer->data,
+						event.channelID);
+					/* Clean up the packet now that we're done using it. */
+					enet_packet_destroy(event.packet);
+					// Lets broadcast this message to all
+					//enet_host_broadcast(server, 0, event.packet);
+					break;
+
+				case ENET_EVENT_TYPE_DISCONNECT:
+					DebugLog("%s disconnected.", event.peer->data);
+						// Reset client's information
+						event.peer->data = NULL;
+					break;
+			}
+		}
+
+		if (SDL_GetTicks() - ticks > 10)
+		{
+			char* message = "Hello";
+			ticks = SDL_GetTicks();
+			if (strlen(message) > 0)
+			{
+				ENetPacket *packet = enet_packet_create(message, strlen(message) + 1, ENET_PACKET_FLAG_RELIABLE);
+				enet_peer_send(&client, 0, packet);
+			}
+		}
 	}
 
 	return 0;
