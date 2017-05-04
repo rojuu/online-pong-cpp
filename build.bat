@@ -15,7 +15,7 @@ set ENET_LIB=%ENET%
 
 set CommonCompilerFlags=/Zi /nologo /FC /I%SDL_INC% /I%ENET_INC%
 
-set CommonLinkerFlags=/out:online-pong.exe /opt:ref /DEBUG /LIBPATH:%SDL_LIB% /LIBPATH:%ENET_LIB% SDL2.lib SDL2main.lib enet.lib winmm.lib ws2_32.lib
+set CommonLinkerFlags=/out:online-pong.exe /DEBUG /LIBPATH:%SDL_LIB% /LIBPATH:%ENET_LIB% SDL2.lib SDL2main.lib enet.lib winmm.lib ws2_32.lib
 
 mkdir build
 pushd build

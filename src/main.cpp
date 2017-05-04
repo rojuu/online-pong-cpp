@@ -15,7 +15,7 @@ void main_ExitCleanUp()
 int main(int argc, char** argv)
 {
 	atexit(main_ExitCleanUp);
-
+	
 	bool isServer = false;
 
 	if (argc > 1)
