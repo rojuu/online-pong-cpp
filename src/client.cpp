@@ -19,7 +19,7 @@ SDL_Window* window;
 struct Vector2 { float x, y; };
 
 bool runNetwork = true;
-void client_ExitCleanUp()
+static void ExitCleanUp()
 {
 	runNetwork = false;
 	enet_host_destroy(client);
@@ -27,7 +27,7 @@ void client_ExitCleanUp()
 	SDL_DestroyWindow(window);
 }
 
-static int network_t(void *ptr)
+static int network_thread(void *ptr)
 {
 	//NETWORK MESSAGE
 #if 1
@@ -36,7 +36,6 @@ static int network_t(void *ptr)
 	while (runNetwork)
 	{
 		eventStatus = enet_host_service(client, &event, 3000);
-		DebugLog("Receiving shit");
 		if (eventStatus > 0)
 		{
 			switch (event.type) {
@@ -73,8 +72,8 @@ static int network_t(void *ptr)
 int run_client(int argc, char** argv)
 {
 	ENetAddress address;
-	atexit(client_ExitCleanUp);
-	SDL_Thread *network_thread;
+	atexit(ExitCleanUp);
+	SDL_Thread *network_t;
 
 	bool hasConnection = true;
 	
@@ -119,7 +118,7 @@ int run_client(int argc, char** argv)
 
 	if (hasConnection)
 	{
-		network_thread = SDL_CreateThread(network_t, "NetworkThread", (void*)NULL);
+		network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 	}
 	
 	SDL_Event e;

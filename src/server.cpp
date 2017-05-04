@@ -10,7 +10,52 @@ const Uint16 PORT = 8080;
 
 ENetHost *server;
 
-void server_ExitCleanUp()
+static int network_thread(void *ptr)
+{
+	const size_t MAX_CLIENTS = 2;
+	int clientCount = 0;
+	ENetPeer client[MAX_CLIENTS] = { 0 };
+	ENetEvent event;
+	int eventStatus = 1;
+
+	DebugLog("Listening to port*%u", PORT);
+	while (true)
+	{
+		eventStatus = enet_host_service(server, &event, 1000);
+
+		if (eventStatus > 0)
+		{
+			switch (event.type) {
+			case ENET_EVENT_TYPE_CONNECT:
+				if (clientCount == MAX_CLIENTS) break;
+				DebugLog("A new connection from %x:%u",
+					event.peer->address.host,
+					event.peer->address.port);
+				client[clientCount++] = *event.peer;
+				break;
+
+			case ENET_EVENT_TYPE_RECEIVE:
+				printf("A packet of length %u containing %s was received from %s on channel %u.",
+					event.packet->dataLength,
+					event.packet->data,
+					event.peer->data,
+					event.channelID);
+				//TODO: Add message to buffer.
+				/* Clean up the packet now that we're done using it. */
+				enet_packet_destroy(event.packet);
+				break;
+
+			case ENET_EVENT_TYPE_DISCONNECT:
+				DebugLog("%s disconnected.", event.peer->data);
+				// Reset client's information
+				event.peer->data = NULL;
+				break;
+			}
+		}
+	}
+}
+
+static void ExitCleanUp()
 {
 	enet_host_destroy(server);
 	enet_deinitialize();
@@ -19,8 +64,9 @@ void server_ExitCleanUp()
 int run_server(int argc, char** argv)
 {
 	ENetAddress address;
-	ENetPeer client = { 0 };
-	atexit(server_ExitCleanUp);
+	atexit(ExitCleanUp);
+
+	SDL_Thread* network_t;
 
 	/* Bind the server to the default localhost.     */
 	/* A specific host address can be specified by   */
@@ -39,57 +85,21 @@ int run_server(int argc, char** argv)
 		return 1;
 	}
 
-	ENetEvent event;
-	int eventStatus = 1;
-
-	Uint32 ticks = SDL_GetTicks();
+	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 	
-	DebugLog("Listening to port*%u", PORT);
-	while (1)
+	
+#if 0
+	if (SDL_GetTicks() - ticks > 10)
 	{
-		eventStatus = enet_host_service(server, &event, 1000);
-
-		if (eventStatus > 0)
+		char* message = "Hello";
+		ticks = SDL_GetTicks();
+		if (strlen(message) > 0)
 		{
-			switch (event.type) {
-				case ENET_EVENT_TYPE_CONNECT:
-					DebugLog("A new connection from %x:%u",
-						event.peer->address.host,
-						event.peer->address.port);
-					client = *event.peer;
-					break;
-
-				case ENET_EVENT_TYPE_RECEIVE:
-					printf("A packet of length %u containing %s was received from %s on channel %u.",
-						event.packet->dataLength,
-						event.packet->data,
-						event.peer->data,
-						event.channelID);
-					/* Clean up the packet now that we're done using it. */
-					enet_packet_destroy(event.packet);
-					// Lets broadcast this message to all
-					//enet_host_broadcast(server, 0, event.packet);
-					break;
-
-				case ENET_EVENT_TYPE_DISCONNECT:
-					DebugLog("%s disconnected.", event.peer->data);
-						// Reset client's information
-						event.peer->data = NULL;
-					break;
-			}
-		}
-
-		if (SDL_GetTicks() - ticks > 10)
-		{
-			char* message = "Hello";
-			ticks = SDL_GetTicks();
-			if (strlen(message) > 0)
-			{
-				ENetPacket *packet = enet_packet_create(message, strlen(message) + 1, ENET_PACKET_FLAG_RELIABLE);
-				enet_peer_send(&client, 0, packet);
-			}
+			ENetPacket *packet = enet_packet_create(message, strlen(message) + 1, ENET_PACKET_FLAG_RELIABLE);
+			enet_peer_send(&client, 0, packet);
 		}
 	}
+#endif
 
 	return 0;
 }

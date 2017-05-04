@@ -6,15 +6,16 @@
 #include "client.h"
 #include "server.h"
 
-void main_ExitCleanUp()
+static void ExitCleanUp()
 {
+	Logging_Deinit();
 	enet_deinitialize();
 	SDL_Quit();
 }
 
 int main(int argc, char** argv)
 {
-	atexit(main_ExitCleanUp);
+	atexit(ExitCleanUp);
 	
 	bool isServer = false;
 
@@ -33,17 +34,23 @@ int main(int argc, char** argv)
 		}
 	}
 
+	if (Logging_Init() == -1)
+	{
+		printf("Logging couldn't be initialized\n");
+		return -1;
+	}
+
 	if (SDL_Init(0) == -1)
 	{
 		LogSDLError("SDL_Init");
-		return -1;
+		return -2;
 	}
 
 	if (enet_initialize() != 0)
 	{
 		DebugLog("An error occurred while initializing ENet.");
 		if(isServer)
-			return -2;
+			return -3;
 	}
 
 	int ret = 0;
