@@ -20,6 +20,6 @@ set CommonLinkerFlags=/out:online-pong.exe /DEBUG /LIBPATH:%SDL_LIB% /LIBPATH:%E
 mkdir build
 pushd build
 robocopy %SDL_LIB% . *.dll
-del *.pdb > NUL 2> NUL
+::del *.pdb > NUL 2> NUL
 cl  %CommonCompilerFlags% ..\src\*.cpp /link /subsystem:console %CommonLinkerFlags%
 popd

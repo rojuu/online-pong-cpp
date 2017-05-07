@@ -178,6 +178,16 @@ int run_client(int argc, char** argv)
 			}
 		}
 
+#if 1
+		if(hasConnection && TimeFromLastMessage > 1/NetworkRate)
+		{
+			TimeFromLastMessage = 0;
+			ENetPacket* packet = enet_packet_create("HEllo", sizeof("Hello"), ENET_PACKET_FLAG_RELIABLE);
+			enet_peer_send(server, 0, packet);
+			enet_packet_destroy(packet);
+		}
+#endif
+
 //RENDERING
 #if 1
 		// Color defines

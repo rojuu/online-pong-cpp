@@ -9,12 +9,13 @@
 const Uint16 PORT = 8080;
 
 SDL_mutex* PRINT_MUTEX;
+SDL_mutex* MESSAGE_MUTEX;
 
 ENetHost *server;
 
 struct Message
 {
-	char* message;
+	ENetPacket* packet;
 	int clientID;
 };
 
@@ -60,10 +61,11 @@ static int network_thread(void *ptr)
 					
 					SDL_UnlockMutex(PRINT_MUTEX);
 					Message m = { 0 };
-					m.message = new char[event.packet->dataLength];
-					m.message = (char*)event.packet->data;
+					m.packet = event.packet;
 					m.clientID = client[0].connectID == event.peer->connectID ? 0 : 1;
+					SDL_LockMutex(MESSAGE_MUTEX);
 					CLIENT_MESSAGES.push_back(m);
+					SDL_UnlockMutex(MESSAGE_MUTEX);
 					break;
 				}
 
@@ -83,6 +85,7 @@ static int network_thread(void *ptr)
 
 static void ExitCleanUp()
 {
+	SDL_DestroyMutex(MESSAGE_MUTEX);
 	SDL_DestroyMutex(PRINT_MUTEX);
 	enet_host_destroy(server);
 	enet_deinitialize();
@@ -96,6 +99,7 @@ int run_server(int argc, char** argv)
 	SDL_Thread* network_t;
 
 	PRINT_MUTEX = SDL_CreateMutex();
+	MESSAGE_MUTEX = SDL_CreateMutex();
 
 	/* Bind the server to the default localhost.     */
 	/* A specific host address can be specified by   */
@@ -120,9 +124,23 @@ int run_server(int argc, char** argv)
 	{
 		
 		SDL_LockMutex(PRINT_MUTEX);
-		printf("Updating\n");
+		DebugLog("Updating");
+		
+		SDL_LockMutex(MESSAGE_MUTEX);
+		if(CLIENT_MESSAGES.size() > 0)
+		{
+			for(auto msg : CLIENT_MESSAGES)
+			{
+				char* data = (char*)msg.packet->data;
+				DebugLog(data);
+				enet_packet_destroy(msg.packet);
+			}
+			CLIENT_MESSAGES.clear();
+		}
+		SDL_UnlockMutex(MESSAGE_MUTEX);
+
 		SDL_UnlockMutex(PRINT_MUTEX);
-		SDL_Delay(1000);
+		SDL_Delay(4000);
 	}
 
 #if 0
