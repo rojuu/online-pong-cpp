@@ -8,6 +8,8 @@
 
 const Uint16 PORT = 8080;
 
+SDL_mutex* PRINT_MUTEX;
+
 ENetHost *server;
 
 struct Message
@@ -37,21 +39,26 @@ static int network_thread(void *ptr)
 			{
 				case ENET_EVENT_TYPE_CONNECT:
 				{	if (clientCount == MAX_CLIENTS) break;
+					SDL_LockMutex(PRINT_MUTEX);
 					DebugLog("A new connection from %x:%u",
 						event.peer->address.host,
 						event.peer->address.port);
+
+					SDL_UnlockMutex(PRINT_MUTEX);
 					client[clientCount++] = *event.peer;
 					break;
 				}
 
 				case ENET_EVENT_TYPE_RECEIVE:
 				{
+					SDL_LockMutex(PRINT_MUTEX);
 					printf("A packet of length %u containing %s was received from %s on channel %u.",
 						event.packet->dataLength,
 						event.packet->data,
 						event.peer->data,
 						event.channelID);
 					
+					SDL_UnlockMutex(PRINT_MUTEX);
 					Message m = { 0 };
 					m.message = new char[event.packet->dataLength];
 					m.message = (char*)event.packet->data;
@@ -62,7 +69,9 @@ static int network_thread(void *ptr)
 
 				case ENET_EVENT_TYPE_DISCONNECT:
 				{
+					SDL_LockMutex(PRINT_MUTEX);
 					DebugLog("%s disconnected.", event.peer->data);
+					SDL_UnlockMutex(PRINT_MUTEX);
 					// Reset client's information
 					event.peer->data = NULL;
 					break;
@@ -74,6 +83,7 @@ static int network_thread(void *ptr)
 
 static void ExitCleanUp()
 {
+	SDL_DestroyMutex(PRINT_MUTEX);
 	enet_host_destroy(server);
 	enet_deinitialize();
 }
@@ -84,6 +94,8 @@ int run_server(int argc, char** argv)
 	atexit(ExitCleanUp);
 
 	SDL_Thread* network_t;
+
+	PRINT_MUTEX = SDL_CreateMutex();
 
 	/* Bind the server to the default localhost.     */
 	/* A specific host address can be specified by   */
@@ -104,10 +116,13 @@ int run_server(int argc, char** argv)
 
 	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 
-	DebugLog("Listening to port*%u", PORT);
 	while(1)
 	{
-		SDL_Delay(100);
+		
+		SDL_LockMutex(PRINT_MUTEX);
+		printf("Updating\n");
+		SDL_UnlockMutex(PRINT_MUTEX);
+		SDL_Delay(1000);
 	}
 
 #if 0
