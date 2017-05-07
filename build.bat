@@ -13,7 +13,7 @@ set SDL_LIB=%SDL2%\lib\%TARGET%
 set ENET_INC=%ENET%\include
 set ENET_LIB=%ENET%
 
-set CommonCompilerFlags=/Zi /nologo /FC /I%SDL_INC% /I%ENET_INC%
+set CommonCompilerFlags=/Zi /EHsc /nologo /FC /I%SDL_INC% /I%ENET_INC%
 
 set CommonLinkerFlags=/out:online-pong.exe /DEBUG /LIBPATH:%SDL_LIB% /LIBPATH:%ENET_LIB% SDL2.lib SDL2main.lib enet.lib winmm.lib ws2_32.lib
 
