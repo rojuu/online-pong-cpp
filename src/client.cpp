@@ -5,6 +5,7 @@
 #include <enet/enet.h>
 #include "SDL.h"
 #include "logging.h"
+#include "packet.h"
 
 
 const char* HOST = "127.0.0.1";
@@ -184,9 +185,12 @@ int run_client(int argc, char** argv)
 		if(hasConnection && TimeFromLastMessage > 1/NetworkRate)
 		{
 			TimeFromLastMessage = 0;
-			ENetPacket* packet = enet_packet_create("Hello", sizeof("Hello"), ENET_PACKET_FLAG_RELIABLE);
+			Packet p;
+			char* m = "HELLLOOO";
+			p.size = sizeof("HELLLOOO");
+			p.message = m;
+			ENetPacket* packet = enet_packet_create(p.message, p.size, ENET_PACKET_FLAG_RELIABLE);
 			enet_peer_send(server, 0, packet);
-			//enet_packet_destroy(packet);
 		}
 #endif
 

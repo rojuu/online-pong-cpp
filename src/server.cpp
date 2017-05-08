@@ -5,6 +5,7 @@
 #include <enet/enet.h>
 #include "SDL.h"
 #include "logging.h"
+#include "packet.h"
 
 const Uint16 PORT = 8080;
 
@@ -52,11 +53,10 @@ static int network_thread(void *ptr)
 				case ENET_EVENT_TYPE_RECEIVE:
 				{
 					SDL_LockMutex(PRINT_MUTEX);
-					DebugLog("A packet of length %u containing %s was received from %u:%u on channel %u.",
+					DebugLog("A packet of length %u received from ID: %u on channel %u.",
 						event.packet->dataLength,
 						event.packet->data,
-						event.peer->address.host,
-						event.peer->address.port,
+						event.peer->connectID,
 						event.channelID);
 					
 					SDL_UnlockMutex(PRINT_MUTEX);
@@ -132,8 +132,10 @@ int run_server(int argc, char** argv)
 		{
 			for(auto msg : CLIENT_MESSAGES)
 			{
-				char* data = (char*)msg.packet->data;
-				DebugLog(data);
+				Packet p;
+				p.size = msg.packet->dataLength;
+				p.message = (char*)msg.packet->data;
+				DebugLog("Message: %s", p.message);
 				enet_packet_destroy(msg.packet);
 			}
 			CLIENT_MESSAGES.clear();
