@@ -60,7 +60,9 @@ static int network_thread(void *ptr)
 			}
 		}
 		/*if (strlen(message) > 0) {
-		ENetPacket *packet = enet_packet_create(message, strlen(message) + 1, ENET_PACKET_FLAG_RELIABLE);
+		ENetPacket *packet = enet_packet_create(message, strlen(message) + 1, 
+			ENET_PACKET_FLAG_RELIABLE);
+
 		enet_peer_send(server, 0, packet);
 		}*/
 	}
@@ -150,7 +152,7 @@ int run_client(int argc, char** argv)
 	float TimeFromStart = CurrentTime - StartTime;
 	float LastTime = 0;
 	float DeltaTime = 0;
-	float NetworkRate = 66; //How many messages per second
+	float NetworkRate = 1; //How many messages per second
 	float TimeFromLastMessage = 1 / NetworkRate;
 
 //MAIN LOOP
@@ -182,9 +184,9 @@ int run_client(int argc, char** argv)
 		if(hasConnection && TimeFromLastMessage > 1/NetworkRate)
 		{
 			TimeFromLastMessage = 0;
-			ENetPacket* packet = enet_packet_create("HEllo", sizeof("Hello"), ENET_PACKET_FLAG_RELIABLE);
+			ENetPacket* packet = enet_packet_create("Hello", sizeof("Hello"), ENET_PACKET_FLAG_RELIABLE);
 			enet_peer_send(server, 0, packet);
-			enet_packet_destroy(packet);
+			//enet_packet_destroy(packet);
 		}
 #endif
 

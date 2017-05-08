@@ -29,11 +29,10 @@ static int network_thread(void *ptr)
 	ENetEvent event;
 	int eventStatus = 1;
 
-	DebugLog("Listening to port*%u", PORT);
-	while (true)
+	DebugLog("Listening to port *%u", PORT);
+	while (1)
 	{
 		eventStatus = enet_host_service(server, &event, 1000);
-
 		if (eventStatus > 0)
 		{
 			switch (event.type)
@@ -53,10 +52,11 @@ static int network_thread(void *ptr)
 				case ENET_EVENT_TYPE_RECEIVE:
 				{
 					SDL_LockMutex(PRINT_MUTEX);
-					printf("A packet of length %u containing %s was received from %s on channel %u.",
+					DebugLog("A packet of length %u containing %s was received from %u:%u on channel %u.",
 						event.packet->dataLength,
 						event.packet->data,
-						event.peer->data,
+						event.peer->address.host,
+						event.peer->address.port,
 						event.channelID);
 					
 					SDL_UnlockMutex(PRINT_MUTEX);
@@ -122,10 +122,11 @@ int run_server(int argc, char** argv)
 
 	while(1)
 	{
-		
+		SDL_Delay(4000);
+
 		SDL_LockMutex(PRINT_MUTEX);
 		DebugLog("Updating");
-		
+
 		SDL_LockMutex(MESSAGE_MUTEX);
 		if(CLIENT_MESSAGES.size() > 0)
 		{
@@ -140,7 +141,6 @@ int run_server(int argc, char** argv)
 		SDL_UnlockMutex(MESSAGE_MUTEX);
 
 		SDL_UnlockMutex(PRINT_MUTEX);
-		SDL_Delay(4000);
 	}
 
 #if 0
@@ -150,7 +150,8 @@ int run_server(int argc, char** argv)
 		ticks = SDL_GetTicks();
 		if (strlen(message) > 0)
 		{
-			ENetPacket *packet = enet_packet_create(message, strlen(message) + 1, ENET_PACKET_FLAG_RELIABLE);
+			ENetPacket *packet = enet_packet_create(message, strlen(message)+1
+				, ENET_PACKET_FLAG_RELIABLE);
 			enet_peer_send(&client, 0, packet);
 		}
 	}
