@@ -5,7 +5,7 @@
 #include <enet/enet.h>
 #include "SDL.h"
 #include "logging.h"
-#include "packet.h"
+#include "network.h"
 
 const Uint16 PORT = 8080;
 
@@ -134,8 +134,9 @@ int run_server(int argc, char** argv)
 			{
 				Packet p;
 				p.size = msg.packet->dataLength;
-				p.message = (char*)msg.packet->data;
-				DebugLog("Message: %s", p.message);
+				p.message = msg.packet->data;
+				ClientMessage m = *(ClientMessage*)(p.message);
+				DebugLog("Message: %u", m.i);
 				enet_packet_destroy(msg.packet);
 			}
 			CLIENT_MESSAGES.clear();

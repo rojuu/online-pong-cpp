@@ -15,23 +15,6 @@ static void ExitCleanUp()
 int main(int argc, char** argv)
 {
 	atexit(ExitCleanUp);
-	
-	bool isServer = false;
-
-	if (argc > 1)
-	{
-		for (size_t i = 0; i < argc; i++)
-		{
-			if (strcmp(argv[i], "-s") == 0)
-			{
-				isServer = true;
-			}
-			else if(strcmp(argv[i], "-server") == 0)
-			{
-				isServer = true;
-			}
-		}
-	}
 
 	if (SDL_Init(0) == -1)
 	{
@@ -42,19 +25,18 @@ int main(int argc, char** argv)
 	if (enet_initialize() != 0)
 	{
 		DebugLog("An error occurred while initializing ENet.");
-		if(isServer)
+		#ifdef SERVER
 			return -2;
+		#endif
 	}
 
-	int ret = 0;
-	if (isServer)
-	{
+	int ret = -3;
+#ifdef SERVER
 		ret = run_server(argc, argv);
-	}
-	else
-	{
+#endif
+#ifdef CLIENT
 		ret = run_client(argc, argv);
-	}
+#endif
 
 	return ret;
 }
