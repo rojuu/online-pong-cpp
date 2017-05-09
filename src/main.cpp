@@ -16,6 +16,27 @@ int main(int argc, char** argv)
 {
 	atexit(ExitCleanUp);
 
+	bool isServer = false;
+
+	if (argc > 1)
+	{
+		for (size_t i = 0; i < argc; i++)
+		{
+			if (strcmp(argv[i], "-s") == 0)
+			{
+				isServer = true;
+			}
+			else if(strcmp(argv[i], "-server") == 0)
+			{
+				isServer = true;
+			}
+		}
+	}
+
+#ifdef SERVER // Maybe we want to build a server separately at some point
+	isServer = true;
+#endif
+
 	if (SDL_Init(0) == -1)
 	{
 		LogSDLError("SDL_Init");
@@ -31,12 +52,14 @@ int main(int argc, char** argv)
 	}
 
 	int ret = -3;
-#ifdef SERVER
+	if(isServer)
+	{
 		ret = run_server(argc, argv);
-#endif
-#ifdef CLIENT
+	}
+	else
+	{
 		ret = run_client(argc, argv);
-#endif
+	}
 
 	return ret;
 }

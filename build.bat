@@ -26,9 +26,5 @@ set CommonLinkerFlags=/DEBUG /LIBPATH:%SDL_LIB% /LIBPATH:%ENET_LIB% SDL2.lib SDL
 mkdir build
 pushd build
 robocopy %SDL_LIB% . *.dll
-::del *.pdb > NUL 2> NUL
-cl %CommonCompilerFlags% ..\src\*.cpp -DCLIENT /link /subsystem:console %CommonLinkerFlags% /out:client.exe
-IF %ERRORLEVEL%==0 ( :: If we got a compile error from the first one, probably won't need to run this one.
-cl %CommonCompilerFlags% ..\src\*.cpp -DSERVER /link /subsystem:console %CommonLinkerFlags% /out:server.exe
-)
+cl %CommonCompilerFlags% ..\src\*.cpp /link /subsystem:console %CommonLinkerFlags% /out:online-pong.exe
 popd
