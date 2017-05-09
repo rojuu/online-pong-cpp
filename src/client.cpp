@@ -6,6 +6,7 @@
 #include "SDL.h"
 #include "logging.h"
 #include "network.h"
+#include "game.h"
 
 
 const char* HOST = "127.0.0.1";
@@ -16,8 +17,6 @@ ENetPeer * server;
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 SDL_Window* window;
-
-struct Vector2 { float x, y; };
 
 bool runNetwork = true;
 static void ExitCleanUp()
@@ -124,9 +123,11 @@ int run_client(int argc, char** argv)
 		network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 	}
 	
+	// Events
 	SDL_Event e;
 	bool quit = false;
 
+	// Drawing vars
 	const int paddleWidth = 6;
 	const int paddleHeight = 60;
 	const int paddleOffset = 20;
@@ -134,21 +135,28 @@ int run_client(int argc, char** argv)
 	const int ballWidth = 6;
 	const int ballHeight = ballWidth;
 
-	const int paddleCount = 2;
-	SDL_Rect paddleRects[paddleCount] = { 0 };
+	SDL_Rect paddleRects[GAME_PADDLE_COUNT] = { 0 };
 	SDL_Rect* paddleRect = 0;
 
 	SDL_Rect ballRect = { 0 };
-	Vector2 ballPosition = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
-	Vector2 ballVelocity = { -10, 0 };
 
-	int paddleYs[paddleCount];
-	for (size_t i = 0; i < paddleCount; i++)
+	
+	GameState gameState = { 0 };
+
+	gameState.ballPosition = { 0, 0 }; // range: -1..1
+	gameState.ballVelocity = { -0.1f, 0 };
+	gameState.paddleYs[GAME_PADDLE_COUNT];
+
+	for (size_t i = 0; i < GAME_PADDLE_COUNT; ++i)
 	{
-		paddleYs[i] = SCREEN_HEIGHT / 2 - paddleHeight / 2;
+		gameState.paddleYs[i] = SCREEN_HEIGHT / 2 - paddleHeight / 2;
 	}
 
-	float CurrentTime = (float)SDL_GetPerformanceCounter() / (float)SDL_GetPerformanceFrequency();
+	//TODO: Figure out if we need so many timers
+	//TODO: Figure out if SDL_GetPerformanceCounter is bad shit and
+	// we should use SDL_GetTicks() isntead
+	float CurrentTime = (float)SDL_GetPerformanceCounter() / 
+							(float)SDL_GetPerformanceFrequency();
 	float StartTime = CurrentTime;
 	float TimeFromStart = CurrentTime - StartTime;
 	float LastTime = 0;
@@ -161,7 +169,8 @@ int run_client(int argc, char** argv)
 	while (!quit)
 	{
 		LastTime = CurrentTime;
-		CurrentTime = (float)SDL_GetPerformanceCounter() / (float)SDL_GetPerformanceFrequency();
+		CurrentTime = (float)SDL_GetPerformanceCounter() / 
+						(float)SDL_GetPerformanceFrequency();
 		TimeFromStart = CurrentTime - StartTime;
 		DeltaTime = (float)(CurrentTime - LastTime);
 		TimeFromLastMessage += DeltaTime;
@@ -173,11 +182,16 @@ int run_client(int argc, char** argv)
 				quit = true;
 			}
 
-			if (e.type == SDL_MOUSEMOTION || e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
+			if (e.type == SDL_MOUSEMOTION 
+			 || e.type == SDL_MOUSEBUTTONDOWN 
+			 || e.type == SDL_MOUSEBUTTONUP)
 			{
 				int x, y;
 				SDL_GetMouseState(&x, &y);
-				paddleYs[0] = y;
+				float fy = y;
+				fy = fy / SCREEN_WIDTH;
+				fy = fy * 2 - 1;
+				gameState.paddleYs[0] = fy;
 			}
 		}
 
@@ -189,7 +203,8 @@ int run_client(int argc, char** argv)
 			Packet p;
 			p.size = sizeof(m);
 			p.message = &m;
-			ENetPacket* packet = enet_packet_create(p.message, p.size, ENET_PACKET_FLAG_RELIABLE);
+			ENetPacket* packet = enet_packet_create(p.message, p.size, 
+				ENET_PACKET_FLAG_RELIABLE);
 			enet_peer_send(server, 0, packet);
 		}
 #endif
@@ -200,35 +215,44 @@ int run_client(int argc, char** argv)
 #define WHITE 0xFF, 0xFF, 0xFF, 0xFF
 #define BLACK 0x00, 0x00, 0x00, 0xFF
 
-		//Clear screen
+		// Clear screen
 		SDL_SetRenderDrawColor(renderer, BLACK);
 		SDL_RenderClear(renderer);
 
-		//Render paddles
+		// Render paddles
 		SDL_SetRenderDrawColor(renderer, WHITE);
-		for (size_t i = 0; i < paddleCount; i++)
+		for (size_t i = 0; i < GAME_PADDLE_COUNT; i++)
 		{
+			float y = gameState.paddleYs[i];
+			y = y / 2 + 1;
+			y = y * SCREEN_HEIGHT;
+
 			paddleRect = &paddleRects[i];
 			paddleRect->w = paddleWidth;
 			paddleRect->h = paddleHeight;
-			paddleRect->x = paddleOffset - paddleWidth / 2 + (SCREEN_WIDTH - paddleOffset * 2) * i;
-			paddleRect->y = paddleYs[i] - paddleHeight / 2;
+			paddleRect->x = paddleOffset - paddleWidth / 2 
+				+ (SCREEN_WIDTH - paddleOffset * 2) * i; // Enemy paddle on right
+			paddleRect->y = y - paddleHeight / 2;
 
 			SDL_RenderFillRect(renderer, paddleRect);
 		}
 
-		//Render ball
+		// Render ball
 		SDL_SetRenderDrawColor(renderer, WHITE);
 		{
+			Vector2 ballPosition = gameState.ballPosition;
+			ballPosition.x = ballPosition.x / 2 + 1;
+			ballPosition.y = ballPosition.y / 2 + 1;
+
 			ballRect.w = ballWidth;
 			ballRect.h = ballHeight;
-			ballRect.x = ballPosition.x - ballWidth / 2;
-			ballRect.y = ballPosition.y - ballHeight / 2;
+			ballRect.x = ballPosition.x * SCREEN_WIDTH - ballWidth / 2;
+			ballRect.y = ballPosition.y * SCREEN_HEIGHT - ballHeight / 2;
 
 			SDL_RenderFillRect(renderer, &ballRect);
 		}
 
-		//Draw vertical line of dots
+		// Draw vertical line of dots
 		SDL_SetRenderDrawColor(renderer, WHITE);
 		for (int i = 2; i < SCREEN_HEIGHT; i += 4)
 		{
