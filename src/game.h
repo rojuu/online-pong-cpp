@@ -11,5 +11,5 @@ struct GameState
     // Range -1..1
 	Vector2 ballVelocity;
     // Range -1..1
-	int paddleYs[GAME_PADDLE_COUNT];
+	float paddleYs[GAME_PADDLE_COUNT];
 };

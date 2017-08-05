@@ -14,16 +14,14 @@ SDL_mutex* MESSAGE_MUTEX;
 
 ENetHost *server;
 
-struct Message
-{
+struct Message {
 	ENetPacket* packet;
 	int clientID;
 };
 
 std::list<Message> CLIENT_MESSAGES;
 
-static int network_thread(void *ptr)
-{
+static int network_thread(void *ptr) {
 	const size_t MAX_CLIENTS = 2;
 	int clientCount = 0;
 	ENetPeer client[MAX_CLIENTS] = { 0 };
@@ -31,15 +29,14 @@ static int network_thread(void *ptr)
 	int eventStatus = 1;
 
 	DebugLog("Listening to port *%u", PORT);
-	while (1)
-	{
+	while (1) {
 		eventStatus = enet_host_service(server, &event, 1000);
-		if (eventStatus > 0)
-		{
-			switch (event.type)
-			{
-				case ENET_EVENT_TYPE_CONNECT:
-				{	if (clientCount == MAX_CLIENTS) break;
+		if (eventStatus > 0) {
+			switch (event.type) {
+				case ENET_EVENT_TYPE_CONNECT: {	
+					if (clientCount == MAX_CLIENTS) {
+						break;
+					} 
 					SDL_LockMutex(PRINT_MUTEX);
 					DebugLog("A new connection from %x:%u",
 						event.peer->address.host,
@@ -50,8 +47,7 @@ static int network_thread(void *ptr)
 					break;
 				}
 
-				case ENET_EVENT_TYPE_RECEIVE:
-				{
+				case ENET_EVENT_TYPE_RECEIVE: {
 					SDL_LockMutex(PRINT_MUTEX);
 					DebugLog("A packet of length %u received from ID: %u on channel %u.",
 						event.packet->dataLength,
@@ -69,8 +65,7 @@ static int network_thread(void *ptr)
 					break;
 				}
 
-				case ENET_EVENT_TYPE_DISCONNECT:
-				{
+				case ENET_EVENT_TYPE_DISCONNECT: {
 					SDL_LockMutex(PRINT_MUTEX);
 					DebugLog("%s disconnected.", event.peer->data);
 					SDL_UnlockMutex(PRINT_MUTEX);
@@ -83,16 +78,14 @@ static int network_thread(void *ptr)
 	}
 }
 
-static void ExitCleanUp()
-{
+static void ExitCleanUp() {
 	SDL_DestroyMutex(MESSAGE_MUTEX);
 	SDL_DestroyMutex(PRINT_MUTEX);
 	enet_host_destroy(server);
 	enet_deinitialize();
 }
 
-int run_server(int argc, char** argv)
-{
+int run_server(int argc, char** argv) {
 	ENetAddress address;
 	atexit(ExitCleanUp);
 
@@ -112,26 +105,22 @@ int run_server(int argc, char** argv)
 		0      /* assume any amount of incoming bandwidth */,
 		0      /* assume any amount of outgoing bandwidth */);
 
-	if (server == NULL)
-	{
+	if (server == NULL) {
 		DebugLog("An error occurred while trying to create an ENet server host.");
 		return 1;
 	}
 
 	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 
-	while(1)
-	{
+	while(1) {
 		SDL_Delay(4000);
 
 		SDL_LockMutex(PRINT_MUTEX);
 		DebugLog("Updating");
 
 		SDL_LockMutex(MESSAGE_MUTEX);
-		if(CLIENT_MESSAGES.size() > 0)
-		{
-			for(auto msg : CLIENT_MESSAGES)
-			{
+		if(CLIENT_MESSAGES.size() > 0) {
+			for(auto msg : CLIENT_MESSAGES) {
 				Packet p;
 				p.size = msg.packet->dataLength;
 				p.message = msg.packet->data;

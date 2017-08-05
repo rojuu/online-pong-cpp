@@ -6,28 +6,22 @@
 #include "client.h"
 #include "server.h"
 
-static void ExitCleanUp()
-{
+static void ExitCleanUp() {
 	enet_deinitialize();
 	SDL_Quit();
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char **argv) {
 	atexit(ExitCleanUp);
 
 	bool isServer = false;
 
-	if (argc > 1)
-	{
-		for (size_t i = 0; i < argc; i++)
-		{
-			if (strcmp(argv[i], "-s") == 0)
-			{
+	if (argc > 1){
+		for (size_t i = 0; i < argc; i++){
+			if (strcmp(argv[i], "-s") == 0){
 				isServer = true;
 			}
-			else if(strcmp(argv[i], "-server") == 0)
-			{
+			else if (strcmp(argv[i], "-server") == 0){
 				isServer = true;
 			}
 		}
@@ -37,27 +31,21 @@ int main(int argc, char** argv)
 	isServer = true;
 #endif
 
-	if (SDL_Init(0) == -1)
-	{
+	if (SDL_Init(0) == -1) {
 		LogSDLError("SDL_Init");
 		return -1;
 	}
 
-	if (enet_initialize() != 0)
-	{
+	if (enet_initialize() != 0) {
 		DebugLog("An error occurred while initializing ENet.");
-		#ifdef SERVER
-			return -2;
-		#endif
+		return -2;
 	}
 
 	int ret = -3;
-	if(isServer)
-	{
+	if (isServer){
 		ret = run_server(argc, argv);
 	}
-	else
-	{
+	else{
 		ret = run_client(argc, argv);
 	}
 

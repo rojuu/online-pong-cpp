@@ -19,25 +19,21 @@ const int SCREEN_HEIGHT = 480;
 SDL_Window* window;
 
 bool runNetwork = true;
-static void ExitCleanUp()
-{
+static void ExitCleanUp(){
 	runNetwork = false;
 	enet_host_destroy(client);
 	enet_deinitialize();
 	SDL_DestroyWindow(window);
 }
 
-static int network_thread(void *ptr)
-{
+static int network_thread(void *ptr) {
 	//NETWORK MESSAGE
 #if 1
 	ENetEvent event;
 	int eventStatus;
-	while (runNetwork)
-	{
+	while (runNetwork){
 		eventStatus = enet_host_service(client, &event, 3000);
-		if (eventStatus > 0)
-		{
+		if (eventStatus > 0) {
 			switch (event.type) {
 			case ENET_EVENT_TYPE_CONNECT:
 				DebugLog("A new connection from %x:%u",
@@ -71,11 +67,9 @@ static int network_thread(void *ptr)
 	return 0;
 }
 
-int run_client(int argc, char** argv)
-{
+int run_client(int argc, char** argv) {
 	ENetAddress address;
 	atexit(ExitCleanUp);
-	SDL_Thread *network_t;
 
 	bool hasConnection = true;
 	
@@ -85,8 +79,7 @@ int run_client(int argc, char** argv)
 		57600 / 8 /* 56K modem with 56 Kbps downstream bandwidth */,
 		14400 / 8 /* 56K modem with 14 Kbps upstream bandwidth */);
 
-	if (client == NULL)
-	{
+	if (client == NULL) {
 		DebugLog("An error occurred while trying to create an ENet client host.");
 		hasConnection = false;
 	}
@@ -105,21 +98,20 @@ int run_client(int argc, char** argv)
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		SCREEN_WIDTH, SCREEN_HEIGHT,
 		SDL_WINDOW_SHOWN);
-	if (window == NULL)
-	{
+
+	if (window == NULL) {
 		LogSDLError("SDL_CreateWindow");
 		return 1;
 	}
 
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-	if (renderer == NULL)
-	{
+	if (renderer == NULL) {
 		LogSDLError("SDL_CreateRenderer");
 		return 2;
 	}
 
-	if (hasConnection)
-	{
+	SDL_Thread *network_t;
+	if (hasConnection) {
 		network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 	}
 	
@@ -147,14 +139,13 @@ int run_client(int argc, char** argv)
 	gameState.ballVelocity = { -0.1f, 0 };
 	gameState.paddleYs[GAME_PADDLE_COUNT];
 
-	for (size_t i = 0; i < GAME_PADDLE_COUNT; ++i)
-	{
+	for (size_t i = 0; i < GAME_PADDLE_COUNT; ++i) {
 		gameState.paddleYs[i] = SCREEN_HEIGHT / 2 - paddleHeight / 2;
 	}
 
 	//TODO: Figure out if we need so many timers
 	//TODO: Figure out if SDL_GetPerformanceCounter is bad shit and
-	// we should use SDL_GetTicks() isntead
+	// if we should use SDL_GetTicks() instead
 	float CurrentTime = (float)SDL_GetPerformanceCounter() / 
 							(float)SDL_GetPerformanceFrequency();
 	float StartTime = CurrentTime;
@@ -166,38 +157,34 @@ int run_client(int argc, char** argv)
 
 //MAIN LOOP
 #if 1
-	while (!quit)
-	{
+	while (!quit) {
 		LastTime = CurrentTime;
 		CurrentTime = (float)SDL_GetPerformanceCounter() / 
-						(float)SDL_GetPerformanceFrequency();
+			(float)SDL_GetPerformanceFrequency();
 		TimeFromStart = CurrentTime - StartTime;
 		DeltaTime = (float)(CurrentTime - LastTime);
 		TimeFromLastMessage += DeltaTime;
 
-		while (SDL_PollEvent(&e) != 0)
-		{
-			if (e.type == SDL_QUIT)
-			{
+		while (SDL_PollEvent(&e) != 0) {
+			if (e.type == SDL_QUIT) {
 				quit = true;
 			}
 
 			if (e.type == SDL_MOUSEMOTION 
 			 || e.type == SDL_MOUSEBUTTONDOWN 
-			 || e.type == SDL_MOUSEBUTTONUP)
-			{
+			 || e.type == SDL_MOUSEBUTTONUP
+			) {
 				int x, y;
 				SDL_GetMouseState(&x, &y);
 				float fy = y;
 				fy = fy / SCREEN_WIDTH;
-				fy = fy * 2 - 1;
+				fy = (fy * 2) - 1;
 				gameState.paddleYs[0] = fy;
 			}
 		}
 
 #if 1
-		if(hasConnection && TimeFromLastMessage > 1/NetworkRate)
-		{
+		if(hasConnection && TimeFromLastMessage > 1/NetworkRate) {
 			TimeFromLastMessage = 0;
 			ClientMessage m;
 			Packet p;
@@ -221,10 +208,9 @@ int run_client(int argc, char** argv)
 
 		// Render paddles
 		SDL_SetRenderDrawColor(renderer, WHITE);
-		for (size_t i = 0; i < GAME_PADDLE_COUNT; i++)
-		{
+		for (size_t i = 0; i < GAME_PADDLE_COUNT; i++) {
 			float y = gameState.paddleYs[i];
-			y = y / 2 + 1;
+			y = (y + 1) / 2 ;
 			y = y * SCREEN_HEIGHT;
 
 			paddleRect = &paddleRects[i];
@@ -254,8 +240,7 @@ int run_client(int argc, char** argv)
 
 		// Draw vertical line of dots
 		SDL_SetRenderDrawColor(renderer, WHITE);
-		for (int i = 2; i < SCREEN_HEIGHT; i += 4)
-		{
+		for (int i = 2; i < SCREEN_HEIGHT; i += 4) {
 			SDL_RenderDrawPoint(renderer, SCREEN_WIDTH / 2, i);
 		}
 
