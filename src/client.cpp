@@ -14,8 +14,6 @@ const Uint16 PORT = 8080;
 ENetHost * client;
 ENetPeer * server;
 
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
 SDL_Window* window;
 
 bool runNetwork = true;
@@ -35,28 +33,31 @@ static int network_thread(void *ptr) {
 		eventStatus = enet_host_service(client, &event, 3000);
 		if (eventStatus > 0) {
 			switch (event.type) {
-			case ENET_EVENT_TYPE_CONNECT:
-				DebugLog("A new connection from %x:%u",
-					event.peer->address.host,
-					event.peer->address.port);
-				break;
+				case ENET_EVENT_TYPE_CONNECT: {
+					DebugLog("A new connection from %x:%u",
+						event.peer->address.host,
+						event.peer->address.port);
+					break;
+				}
 
-			case ENET_EVENT_TYPE_RECEIVE:
-				DebugLog("Message from server : %s", event.packet->data);
-				// Lets broadcast this message to all
-				// enet_host_broadcast(client, 0, event.packet);
-				enet_packet_destroy(event.packet);
-				break;
+				case ENET_EVENT_TYPE_RECEIVE: {
+					DebugLog("Message from server : %s", event.packet->data);
+					// Lets broadcast this message to all
+					// enet_host_broadcast(client, 0, event.packet);
+					enet_packet_destroy(event.packet);
+					break;
+				}
 
-			case ENET_EVENT_TYPE_DISCONNECT:
-				DebugLog("%s disconnected.", event.peer->data);
-				// Reset client's information
-				event.peer->data = NULL;
-				break;
+				case ENET_EVENT_TYPE_DISCONNECT: {
+					DebugLog("%s disconnected.", event.peer->data);
+					// Reset client's information
+					event.peer->data = NULL;
+					break;
+				}
 			}
 		}
 		/*if (strlen(message) > 0) {
-		ENetPacket *packet = enet_packet_create(message, strlen(message) + 1, 
+		ENetPacket *packet = enet_packet_create(message, strlen(message) + 1,
 			ENET_PACKET_FLAG_RELIABLE);
 
 		enet_peer_send(server, 0, packet);
@@ -72,7 +73,7 @@ int run_client(int argc, char** argv) {
 	atexit(ExitCleanUp);
 
 	bool hasConnection = true;
-	
+
 	client = enet_host_create(NULL /* create a client host */,
 		1 /* only allow 1 outgoing connection */,
 		2 /* allow up 2 channels to be used, 0 and 1 */,
@@ -104,7 +105,8 @@ int run_client(int argc, char** argv) {
 		return 1;
 	}
 
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1,
+		SDL_RENDERER_ACCELERATED);
 	if (renderer == NULL) {
 		LogSDLError("SDL_CreateRenderer");
 		return 2;
@@ -112,9 +114,10 @@ int run_client(int argc, char** argv) {
 
 	SDL_Thread *network_t;
 	if (hasConnection) {
-		network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
+		network_t = SDL_CreateThread(network_thread, "NetworkThread",
+			(void*)NULL);
 	}
-	
+
 	// Events
 	SDL_Event e;
 	bool quit = false;
@@ -132,11 +135,11 @@ int run_client(int argc, char** argv) {
 
 	SDL_Rect ballRect = { 0 };
 
-	
+
 	GameState gameState = { 0 };
 
-	gameState.ballPosition = { 0, 0 }; // range: -1..1
-	gameState.ballVelocity = { -0.1f, 0 };
+	gameState.ballPosition = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
+	gameState.ballVelocity = { -1.f, 0 };
 	gameState.paddleYs[GAME_PADDLE_COUNT];
 
 	for (size_t i = 0; i < GAME_PADDLE_COUNT; ++i) {
@@ -146,7 +149,7 @@ int run_client(int argc, char** argv) {
 	//TODO: Figure out if we need so many timers
 	//TODO: Figure out if SDL_GetPerformanceCounter is bad shit and
 	// if we should use SDL_GetTicks() instead
-	float CurrentTime = (float)SDL_GetPerformanceCounter() / 
+	float CurrentTime = (float)SDL_GetPerformanceCounter() /
 							(float)SDL_GetPerformanceFrequency();
 	float StartTime = CurrentTime;
 	float TimeFromStart = CurrentTime - StartTime;
@@ -159,7 +162,7 @@ int run_client(int argc, char** argv) {
 #if 1
 	while (!quit) {
 		LastTime = CurrentTime;
-		CurrentTime = (float)SDL_GetPerformanceCounter() / 
+		CurrentTime = (float)SDL_GetPerformanceCounter() /
 			(float)SDL_GetPerformanceFrequency();
 		TimeFromStart = CurrentTime - StartTime;
 		DeltaTime = (float)(CurrentTime - LastTime);
@@ -170,16 +173,13 @@ int run_client(int argc, char** argv) {
 				quit = true;
 			}
 
-			if (e.type == SDL_MOUSEMOTION 
-			 || e.type == SDL_MOUSEBUTTONDOWN 
-			 || e.type == SDL_MOUSEBUTTONUP
+			if (e.type == SDL_MOUSEMOTION ||
+				e.type == SDL_MOUSEBUTTONDOWN ||
+				e.type == SDL_MOUSEBUTTONUP
 			) {
 				int x, y;
 				SDL_GetMouseState(&x, &y);
-				float fy = y;
-				fy = fy / SCREEN_WIDTH;
-				fy = (fy * 2) - 1;
-				gameState.paddleYs[0] = fy;
+				gameState.paddleYs[0] = y;
 			}
 		}
 
@@ -187,10 +187,11 @@ int run_client(int argc, char** argv) {
 		if(hasConnection && TimeFromLastMessage > 1/NetworkRate) {
 			TimeFromLastMessage = 0;
 			ClientMessage m;
+			m.i = gameState.paddleYs[0];
 			Packet p;
 			p.size = sizeof(m);
 			p.message = &m;
-			ENetPacket* packet = enet_packet_create(p.message, p.size, 
+			ENetPacket* packet = enet_packet_create(p.message, p.size,
 				ENET_PACKET_FLAG_RELIABLE);
 			enet_peer_send(server, 0, packet);
 		}
@@ -210,14 +211,12 @@ int run_client(int argc, char** argv) {
 		SDL_SetRenderDrawColor(renderer, WHITE);
 		for (size_t i = 0; i < GAME_PADDLE_COUNT; i++) {
 			float y = gameState.paddleYs[i];
-			y = (y + 1) / 2 ;
-			y = y * SCREEN_HEIGHT;
 
 			paddleRect = &paddleRects[i];
 			paddleRect->w = paddleWidth;
 			paddleRect->h = paddleHeight;
-			paddleRect->x = paddleOffset - paddleWidth / 2 
-				+ (SCREEN_WIDTH - paddleOffset * 2) * i; // Enemy paddle on right
+			paddleRect->x = paddleOffset - paddleWidth / 2
+				+ (SCREEN_WIDTH - paddleOffset * 2) * i; //Enemy paddle on right
 			paddleRect->y = y - paddleHeight / 2;
 
 			SDL_RenderFillRect(renderer, paddleRect);
@@ -225,15 +224,13 @@ int run_client(int argc, char** argv) {
 
 		// Render ball
 		SDL_SetRenderDrawColor(renderer, WHITE);
+
 		{
 			Vector2 ballPosition = gameState.ballPosition;
-			ballPosition.x = ballPosition.x / 2 + 1;
-			ballPosition.y = ballPosition.y / 2 + 1;
-
 			ballRect.w = ballWidth;
 			ballRect.h = ballHeight;
-			ballRect.x = ballPosition.x * SCREEN_WIDTH - ballWidth / 2;
-			ballRect.y = ballPosition.y * SCREEN_HEIGHT - ballHeight / 2;
+			ballRect.x = ballPosition.x - ballWidth / 2;
+			ballRect.y = ballPosition.y - ballHeight / 2;
 
 			SDL_RenderFillRect(renderer, &ballRect);
 		}
@@ -245,7 +242,7 @@ int run_client(int argc, char** argv) {
 		}
 
 		SDL_RenderPresent(renderer);
-#endif	
+#endif
 //END RENDERING
 	}
 #endif

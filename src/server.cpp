@@ -26,17 +26,17 @@ static int network_thread(void *ptr) {
 	int clientCount = 0;
 	ENetPeer client[MAX_CLIENTS] = { 0 };
 	ENetEvent event;
-	int eventStatus = 1;
+	int eventStatus;
 
 	DebugLog("Listening to port *%u", PORT);
 	while (1) {
 		eventStatus = enet_host_service(server, &event, 1000);
 		if (eventStatus > 0) {
 			switch (event.type) {
-				case ENET_EVENT_TYPE_CONNECT: {	
+				case ENET_EVENT_TYPE_CONNECT: {
 					if (clientCount == MAX_CLIENTS) {
 						break;
-					} 
+					}
 					SDL_LockMutex(PRINT_MUTEX);
 					DebugLog("A new connection from %x:%u",
 						event.peer->address.host,
@@ -49,16 +49,18 @@ static int network_thread(void *ptr) {
 
 				case ENET_EVENT_TYPE_RECEIVE: {
 					SDL_LockMutex(PRINT_MUTEX);
-					DebugLog("A packet of length %u received from ID: %u on channel %u.",
+					DebugLog(
+						"A packet of length %u received from ID: %u on channel %u.",
 						event.packet->dataLength,
 						event.packet->data,
 						event.peer->connectID,
 						event.channelID);
-					
+
 					SDL_UnlockMutex(PRINT_MUTEX);
 					Message m = { 0 };
 					m.packet = event.packet;
-					m.clientID = client[0].connectID == event.peer->connectID ? 0 : 1;
+					m.clientID =
+						client[0].connectID == event.peer->connectID ? 0 : 1;
 					SDL_LockMutex(MESSAGE_MUTEX);
 					CLIENT_MESSAGES.push_back(m);
 					SDL_UnlockMutex(MESSAGE_MUTEX);
@@ -99,11 +101,11 @@ int run_server(int argc, char** argv) {
 	/* enet_address_set_host (& address, "x.x.x.x"); */
 	address.host = ENET_HOST_ANY;
 	address.port = PORT;
-	server = enet_host_create(&address /* the address to bind the server host to */,
-		32      /* allow up to 32 clients and/or outgoing connections */,
-		2      /* allow up to 2 channels to be used, 0 and 1 */,
-		0      /* assume any amount of incoming bandwidth */,
-		0      /* assume any amount of outgoing bandwidth */);
+	server = enet_host_create(&address	/* the address to bind the server host to */,
+		32	/* allow up to 32 clients and/or outgoing connections */,
+		2	/* allow up to 2 channels to be used, 0 and 1 */,
+		0	/* assume any amount of incoming bandwidth */,
+		0	/* assume any amount of outgoing bandwidth */);
 
 	if (server == NULL) {
 		DebugLog("An error occurred while trying to create an ENet server host.");

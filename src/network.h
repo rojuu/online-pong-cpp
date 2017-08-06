@@ -13,5 +13,5 @@ struct ServerMessage
 
 struct ClientMessage
 {
-    Uint32 i = 353523;
+    Uint32 i;
 };
