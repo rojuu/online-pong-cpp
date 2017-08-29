@@ -23,8 +23,8 @@ set CommonCompilerFlags=/Zi /EHsc /nologo /FC /I%SDL_INC% /I%ENET_INC%
 
 set CommonLinkerFlags=/DEBUG /LIBPATH:%SDL_LIB% /LIBPATH:%ENET_LIB% SDL2.lib SDL2main.lib %ENET_LIBFILE% winmm.lib ws2_32.lib
 
-mkdir build_cl
-pushd build_cl
+mkdir build
+pushd build
 robocopy %SDL_LIB% . *.dll
 cl %CommonCompilerFlags% ..\src\*.cpp /link /subsystem:console %CommonLinkerFlags% /out:online-pong.exe
 popd
