@@ -1,0 +1,1 @@
+clang++ -x c++ src\*.cpp -I%SDL2%\include -I%ENET%\include -L%ENET% -L%SDL2%\lib\x86 -lSDL2main.lib -lSDL2.lib -lenet.lib -lwinmm.lib -lws2_32.lib -o build_clang\online-pong.exe -Xlinker /subsystem:windows

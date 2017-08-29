@@ -94,7 +94,7 @@ int run_client(int argc, char** argv) {
 		DebugLog("No available peers for initializing an ENet connection");
 		hasConnection = false;
 	}
-
+        
 	window = SDL_CreateWindow("Pong",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		SCREEN_WIDTH, SCREEN_HEIGHT,
@@ -135,7 +135,6 @@ int run_client(int argc, char** argv) {
 
 	SDL_Rect ballRect = { 0 };
 
-
 	GameState gameState = { 0 };
 
 	gameState.ballPosition = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
@@ -150,7 +149,7 @@ int run_client(int argc, char** argv) {
 	//TODO: Figure out if SDL_GetPerformanceCounter is bad shit and
 	// if we should use SDL_GetTicks() instead
 	float CurrentTime = (float)SDL_GetPerformanceCounter() /
-							(float)SDL_GetPerformanceFrequency();
+                                    (float)SDL_GetPerformanceFrequency();
 	float StartTime = CurrentTime;
 	float TimeFromStart = CurrentTime - StartTime;
 	float LastTime = 0;
