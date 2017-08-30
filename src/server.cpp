@@ -12,6 +12,8 @@ const Uint16 PORT = 8080;
 SDL_mutex* PRINT_MUTEX;
 SDL_mutex* MESSAGE_MUTEX;
 
+const int MAX_CLIENTS = 2;
+internal ENetPeer client[MAX_CLIENTS] = { 0 };
 ENetHost *server;
 
 struct Message {
@@ -21,11 +23,9 @@ struct Message {
 
 std::list<Message> CLIENT_MESSAGES;
 
-static int network_thread(void *ptr) {
-	const size_t MAX_CLIENTS = 2;
-	int clientCount = 0;
-	ENetPeer client[MAX_CLIENTS] = { 0 };
+internal int network_thread(void *ptr) {
 	ENetEvent event;
+	int clientCount = 0;
 	int eventStatus;
 
 	DebugLog("Listening to port *%u", PORT);
@@ -80,7 +80,7 @@ static int network_thread(void *ptr) {
 	}
 }
 
-static void ExitCleanUp() {
+internal void ExitCleanUp() {
 	SDL_DestroyMutex(MESSAGE_MUTEX);
 	SDL_DestroyMutex(PRINT_MUTEX);
 	enet_host_destroy(server);
@@ -114,42 +114,42 @@ int run_server(int argc, char** argv) {
 
 	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 
+	float CurrentTime = (float)SDL_GetPerformanceCounter() /
+							(float)SDL_GetPerformanceFrequency();
+	float StartTime = CurrentTime;
+	float TimeFromStart = CurrentTime - StartTime;
+	float LastTime = 0;
+	float DeltaTime = 0;
+	float NetworkRate = 60; //How many messages per second
+	float TimeFromLastMessage = 1 / NetworkRate;
+
 	while(1) {
-		SDL_Delay(4000);
+		LastTime = CurrentTime;
+		CurrentTime = (float)SDL_GetPerformanceCounter() /
+			(float)SDL_GetPerformanceFrequency();
+		TimeFromStart = CurrentTime - StartTime;
+		DeltaTime = (float)(CurrentTime - LastTime);
+		TimeFromLastMessage += DeltaTime;
 
 		SDL_LockMutex(PRINT_MUTEX);
-		DebugLog("Updating");
-
 		SDL_LockMutex(MESSAGE_MUTEX);
-		if(CLIENT_MESSAGES.size() > 0) {
-			for(auto msg : CLIENT_MESSAGES) {
-				Packet p;
-				p.size = msg.packet->dataLength;
-				p.message = msg.packet->data;
-				ClientMessage m = *(ClientMessage*)(p.message);
-				DebugLog("Message: %u", m.i);
-				enet_packet_destroy(msg.packet);
+		if(TimeFromLastMessage > 1.f/NetworkRate) {
+			if(CLIENT_MESSAGES.size() > 0) {
+				for(auto msg : CLIENT_MESSAGES) {
+					Packet p;
+					p.size = msg.packet->dataLength;
+					p.message = msg.packet->data;
+					ClientMessage m = *(ClientMessage*)(p.message);
+					DebugLog("Message: %u", m.i);
+					enet_packet_destroy(msg.packet);
+				}
+				CLIENT_MESSAGES.clear();
 			}
-			CLIENT_MESSAGES.clear();
 		}
 		SDL_UnlockMutex(MESSAGE_MUTEX);
 
 		SDL_UnlockMutex(PRINT_MUTEX);
 	}
-
-#if 0
-	if (SDL_GetTicks() - ticks > 10)
-	{
-		char* message = "Hello";
-		ticks = SDL_GetTicks();
-		if (strlen(message) > 0)
-		{
-			ENetPacket *packet = enet_packet_create(message, strlen(message)+1
-				, ENET_PACKET_FLAG_RELIABLE);
-			enet_peer_send(&client, 0, packet);
-		}
-	}
-#endif
-
+	
 	return 0;
 }

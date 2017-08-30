@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "main.h"
 #include <enet/enet.h>
 #include "SDL.h"
 #include "logging.h"
 #include "client.h"
 #include "server.h"
 
-static void ExitCleanUp() {
+internal void ExitCleanUp() {
 	enet_deinitialize();
 	SDL_Quit();
 }
@@ -17,7 +18,7 @@ int main(int argc, char **argv) {
 	bool isServer = false;
 
 	if (argc > 1){
-		for (size_t i = 0; i < argc; i++){
+		for (int i = 0; i < argc; i++){
 			if (strcmp(argv[i], "-s") == 0){
 				isServer = true;
 			}

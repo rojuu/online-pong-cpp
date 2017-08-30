@@ -6,7 +6,7 @@
 #include "SDL.h"
 #include "logging.h"
 #include "network.h"
-#include "game.h"
+#include "game.cpp"
 
 
 const char* HOST = "127.0.0.1";
@@ -17,14 +17,14 @@ ENetPeer * server;
 SDL_Window* window;
 
 bool runNetwork = true;
-static void ExitCleanUp(){
+internal void ExitCleanUp(){
 	runNetwork = false;
 	enet_host_destroy(client);
 	enet_deinitialize();
 	SDL_DestroyWindow(window);
 }
 
-static int network_thread(void *ptr) {
+internal int network_thread(void *ptr) {
 	//NETWORK MESSAGE
 #if 1
 	ENetEvent event;
@@ -88,13 +88,14 @@ int run_client(int argc, char** argv) {
 	enet_address_set_host(&address, "localhost");
 	address.port = PORT;
 
+		 
 	server = enet_host_connect(client, &address, 2, 0);
 
 	if (server == NULL) {
 		DebugLog("No available peers for initializing an ENet connection");
 		hasConnection = false;
 	}
-        
+		
 	window = SDL_CreateWindow("Pong",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		SCREEN_WIDTH, SCREEN_HEIGHT,
@@ -123,11 +124,11 @@ int run_client(int argc, char** argv) {
 	bool quit = false;
 
 	// Drawing vars
-	const int paddleWidth = 6;
-	const int paddleHeight = 60;
-	const int paddleOffset = 20;
+	const int paddleWidth = PADDLE_WIDTH;
+	const int paddleHeight = PADDLE_HEIGHT;
+	const int paddleOffset = PADDLE_OFFSET;
 
-	const int ballWidth = 6;
+	const int ballWidth = BALL_RADIUS * 2;
 	const int ballHeight = ballWidth;
 
 	SDL_Rect paddleRects[GAME_PADDLE_COUNT] = { 0 };
@@ -135,13 +136,11 @@ int run_client(int argc, char** argv) {
 
 	SDL_Rect ballRect = { 0 };
 
-	GameState gameState = { 0 };
-
+	GameState gameState;
 	gameState.ballPosition = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
-	gameState.ballVelocity = { -1.f, 0 };
-	gameState.paddleYs[GAME_PADDLE_COUNT];
+	gameState.ballVelocity = { -100.f, 0 };
 
-	for (size_t i = 0; i < GAME_PADDLE_COUNT; ++i) {
+	for (int i = 0; i < GAME_PADDLE_COUNT; ++i) {
 		gameState.paddleYs[i] = SCREEN_HEIGHT / 2 - paddleHeight / 2;
 	}
 
@@ -149,12 +148,12 @@ int run_client(int argc, char** argv) {
 	//TODO: Figure out if SDL_GetPerformanceCounter is bad shit and
 	// if we should use SDL_GetTicks() instead
 	float CurrentTime = (float)SDL_GetPerformanceCounter() /
-                                    (float)SDL_GetPerformanceFrequency();
+							(float)SDL_GetPerformanceFrequency();
 	float StartTime = CurrentTime;
 	float TimeFromStart = CurrentTime - StartTime;
 	float LastTime = 0;
 	float DeltaTime = 0;
-	float NetworkRate = 1; //How many messages per second
+	float NetworkRate = 60; //How many messages per second
 	float TimeFromLastMessage = 1 / NetworkRate;
 
 //MAIN LOOP
@@ -169,21 +168,22 @@ int run_client(int argc, char** argv) {
 
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_QUIT) {
-				quit = true;
+					quit = true;
 			}
 
 			if (e.type == SDL_MOUSEMOTION ||
-				e.type == SDL_MOUSEBUTTONDOWN ||
-				e.type == SDL_MOUSEBUTTONUP
+					e.type == SDL_MOUSEBUTTONDOWN ||
+					e.type == SDL_MOUSEBUTTONUP
 			) {
-				int x, y;
-				SDL_GetMouseState(&x, &y);
-				gameState.paddleYs[0] = y;
+					int x, y;
+					SDL_GetMouseState(&x, &y);
+					gameState.paddleYs[0] = y;
 			}
 		}
 
+		update_state(DeltaTime, &gameState);
 #if 1
-		if(hasConnection && TimeFromLastMessage > 1/NetworkRate) {
+		if(hasConnection && TimeFromLastMessage > 1.f/NetworkRate) {
 			TimeFromLastMessage = 0;
 			ClientMessage m;
 			m.i = gameState.paddleYs[0];
@@ -208,7 +208,7 @@ int run_client(int argc, char** argv) {
 
 		// Render paddles
 		SDL_SetRenderDrawColor(renderer, WHITE);
-		for (size_t i = 0; i < GAME_PADDLE_COUNT; i++) {
+		for (int i = 0; i < GAME_PADDLE_COUNT; i++) {
 			float y = gameState.paddleYs[i];
 
 			paddleRect = &paddleRects[i];
