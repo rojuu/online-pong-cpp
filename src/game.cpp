@@ -4,6 +4,7 @@
 #include "logging.h"
 #include <limits>
 #include <algorithm>
+#include <cmath>
 #undef max
 #undef min
 
@@ -44,7 +45,7 @@ internal float SweptCircleWithRectangle(
 
 	//Find the distance between the objects
 	// on the near and far sides for both x and y
-	if (velocityY > 0.0f) {
+	if (velocityX > 0.0f) {
 		xInvEntry = (rectX - rectWidth / 2.f) - (circleX+ radius);
 		xInvExit = (rectX + rectWidth / 2.f) - (circleX - radius);
 	} else {
@@ -119,11 +120,11 @@ internal void update_state(float dt, GameState* gameState) {
 	float velocityY = gameState->ballVelocity.y * dt;
 	float collisionTime = 1;
 	float normalX = 0, normalY = 0;
+	
 
-
+	int paddleIdx = velocityX < 0 ? 0 : 1;
 	if(velocityX != 0) {
 		float paddleX;
-		int paddleIdx = velocityX < 0 ? 0 : 1;
 		if(paddleIdx) {
 			paddleX = SCREEN_WIDTH - PADDLE_OFFSET;
 		} else {
@@ -138,6 +139,24 @@ internal void update_state(float dt, GameState* gameState) {
 
 	// Adjust for collision
 	if(collisionTime <= 1.f) {
+		if(normalY != 0){	
+			velocityY *= collisionTime;
+
+			velocityY *= -1;
+			gameState->ballVelocity.y *= -1;
+		}
+		if(normalX != 0){
+			velocityX *= collisionTime;
+
+			velocityX *= -1;
+			gameState->ballVelocity.x *= -1;
+
+			float positionMaxDiff = (BALL_RADIUS + PADDLE_HEIGHT);
+			float positionDiff = std::abs(gameState->ballPosition.y - gameState->paddleYs[paddleIdx]);
+			if(positionDiff <= positionMaxDiff){
+				velocityY += velocityY * (positionDiff / positionMaxDiff);
+			}
+		}
 	}
 	
 	gameState->ballPosition.x += velocityX;

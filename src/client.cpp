@@ -138,7 +138,7 @@ int run_client(int argc, char** argv) {
 
 	GameState gameState;
 	gameState.ballPosition = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
-	gameState.ballVelocity = { -100.f, 0 };
+	gameState.ballVelocity = { -100.f, 10.f };
 
 	for (int i = 0; i < GAME_PADDLE_COUNT; ++i) {
 		gameState.paddleYs[i] = SCREEN_HEIGHT / 2 - paddleHeight / 2;
@@ -178,6 +178,7 @@ int run_client(int argc, char** argv) {
 					int x, y;
 					SDL_GetMouseState(&x, &y);
 					gameState.paddleYs[0] = y;
+					gameState.paddleYs[1] = y;
 			}
 		}
 
