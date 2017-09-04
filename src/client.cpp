@@ -72,6 +72,8 @@ int run_client(int argc, char** argv) {
 	ENetAddress address;
 	atexit(ExitCleanUp);
 
+	DebugLog("Running Client");
+
 	bool hasConnection = true;
 
 	client = enet_host_create(NULL /* create a client host */,

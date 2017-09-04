@@ -91,6 +91,8 @@ int run_server(int argc, char** argv) {
 	ENetAddress address;
 	atexit(ExitCleanUp);
 
+	DebugLog("Running server");
+
 	SDL_Thread* network_t;
 
 	PRINT_MUTEX = SDL_CreateMutex();
