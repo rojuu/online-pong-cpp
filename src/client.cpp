@@ -72,8 +72,6 @@ int run_client(int argc, char** argv) {
 	ENetAddress address;
 	atexit(ExitCleanUp);
 
-	DebugLog("Running Client");
-
 	bool hasConnection = true;
 
 	client = enet_host_create(NULL /* create a client host */,
@@ -103,22 +101,15 @@ int run_client(int argc, char** argv) {
 		SCREEN_WIDTH, SCREEN_HEIGHT,
 		SDL_WINDOW_SHOWN);
 
-	if (window == NULL) {
-		LogSDLError("SDL_CreateWindow");
-		return 1;
-	}
+	assert(window != NULL);
 
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1,
 		SDL_RENDERER_ACCELERATED);
-	if (renderer == NULL) {
-		LogSDLError("SDL_CreateRenderer");
-		return 2;
-	}
+	assert(renderer != NULL);
 
 	SDL_Thread *network_t;
 	if (hasConnection) {
-		network_t = SDL_CreateThread(network_thread, "NetworkThread",
-			(void*)NULL);
+		network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 	}
 
 	// Events
@@ -162,10 +153,11 @@ int run_client(int argc, char** argv) {
 #if 1
 	while (!quit) {
 		LastTime = CurrentTime;
-		CurrentTime = (float)SDL_GetPerformanceCounter() /
-			(float)SDL_GetPerformanceFrequency();
+		float PerformanceCounter = (float)SDL_GetPerformanceCounter();
+		float PerformanceFrequency = (float)SDL_GetPerformanceFrequency();
+		CurrentTime = PerformanceCounter / PerformanceFrequency;
 		TimeFromStart = CurrentTime - StartTime;
-		DeltaTime = (float)(CurrentTime - LastTime);
+		DeltaTime = (float)(CurrentTime -PerformanceCounter / PerformanceFrequency; LastTime);
 		TimeFromLastMessage += DeltaTime;
 
 		while (SDL_PollEvent(&e) != 0) {

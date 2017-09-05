@@ -91,8 +91,6 @@ int run_server(int argc, char** argv) {
 	ENetAddress address;
 	atexit(ExitCleanUp);
 
-	DebugLog("Running server");
-
 	SDL_Thread* network_t;
 
 	PRINT_MUTEX = SDL_CreateMutex();
@@ -109,11 +107,8 @@ int run_server(int argc, char** argv) {
 		0	/* assume any amount of incoming bandwidth */,
 		0	/* assume any amount of outgoing bandwidth */);
 
-	if (server == NULL) {
-		DebugLog("An error occurred while trying to create an ENet server host.");
-		return 1;
-	}
-
+	assert(server != null);
+	
 	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 
 	float CurrentTime = (float)SDL_GetPerformanceCounter() /

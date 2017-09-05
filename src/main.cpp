@@ -6,7 +6,7 @@
 #include "logging.h"
 #include "client.h"
 #include "server.h"
-
+#include <assert.h>
 internal void ExitCleanUp() {
 	enet_deinitialize();
 	SDL_Quit();
@@ -32,17 +32,10 @@ int main(int argc, char **argv) {
 	isServer = true;
 #endif
 
-	if (SDL_Init(0) == -1) {
-		LogSDLError("SDL_Init");
-		return -1;
-	}
+	assert(SDL_Init(0) != -1);
+	assert(enet_initialize() == 0);
 
-	if (enet_initialize() != 0) {
-		DebugLog("An error occurred while initializing ENet.");
-		return -2;
-	}
-
-	int ret = -3;
+	int ret = 0;
 	if (isServer){
 		ret = run_server(argc, argv);
 	}
