@@ -6,7 +6,6 @@
 #include "logging.h"
 #include "client.h"
 #include "server.h"
-#include <assert.h>
 internal void ExitCleanUp() {
 	enet_deinitialize();
 	SDL_Quit();

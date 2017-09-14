@@ -107,7 +107,7 @@ int run_server(int argc, char** argv) {
 		0	/* assume any amount of incoming bandwidth */,
 		0	/* assume any amount of outgoing bandwidth */);
 
-	assert(server != null);
+	assert(server != NULL);
 	
 	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 

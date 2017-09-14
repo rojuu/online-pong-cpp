@@ -157,7 +157,7 @@ int run_client(int argc, char** argv) {
 		float PerformanceFrequency = (float)SDL_GetPerformanceFrequency();
 		CurrentTime = PerformanceCounter / PerformanceFrequency;
 		TimeFromStart = CurrentTime - StartTime;
-		DeltaTime = (float)(CurrentTime -PerformanceCounter / PerformanceFrequency; LastTime);
+		DeltaTime = (float)(CurrentTime - LastTime);
 		TimeFromLastMessage += DeltaTime;
 
 		while (SDL_PollEvent(&e) != 0) {
