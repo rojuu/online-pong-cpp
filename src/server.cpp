@@ -10,7 +10,7 @@
 const Uint16 PORT = 8080;
 
 SDL_mutex* PRINT_MUTEX;
-SDL_mutex* MESSAGE_MUTEX;
+//SDL_mutex* MESSAGE_MUTEX;
 
 const int MAX_CLIENTS = 2;
 internal ENetPeer* client[MAX_CLIENTS] = { 0 };
@@ -48,7 +48,6 @@ internal int network_thread(void *ptr) {
 					DebugLog(
 						"A packet of length %u received from ID: %u on channel %u.",
 						event.packet->dataLength,
-						event.packet->data,
 						event.peer->connectID,
 						event.channelID);
 
@@ -57,9 +56,7 @@ internal int network_thread(void *ptr) {
 					m.packet = event.packet;
 					m.clientID =
 						client[0]->connectID == event.peer->connectID ? 0 : 1;
-					SDL_LockMutex(MESSAGE_MUTEX);
 					CLIENT_MESSAGES.push_back(m);
-					SDL_UnlockMutex(MESSAGE_MUTEX);
 					break;
 				}
 
@@ -77,7 +74,6 @@ internal int network_thread(void *ptr) {
 }
 
 internal void ExitCleanUp() {
-	SDL_DestroyMutex(MESSAGE_MUTEX);
 	SDL_DestroyMutex(PRINT_MUTEX);
 	enet_host_destroy(server);
 	enet_deinitialize();
@@ -90,7 +86,6 @@ int run_server(int argc, char** argv) {
 	SDL_Thread* network_t;
 
 	PRINT_MUTEX = SDL_CreateMutex();
-	MESSAGE_MUTEX = SDL_CreateMutex();
 
 	/* Bind the server to the default localhost.     */
 	/* A specific host address can be specified by   */
@@ -126,29 +121,26 @@ int run_server(int argc, char** argv) {
 		
 		if(DeltaTime > 0.1f) DeltaTime = 0.1f;
 
-		
 		if(TimeFromLastMessage > 1.f/NetworkRate) {
 			//SDL_LockMutex(PRINT_MUTEX);
 			//SDL_UnlockMutex(PRINT_MUTEX);
 
-			SDL_LockMutex(MESSAGE_MUTEX);
-			if(CLIENT_MESSAGES.size() > 0) {
-				for(auto msg : CLIENT_MESSAGES) {
-					Packet p;
-					p.size = msg.packet->dataLength;
-					p.message = msg.packet->data;
-					ClientMessage m = *(ClientMessage*)(p.message);
-					//DebugLog("Message: %u", m.i);
-					enet_packet_destroy(msg.packet);
-				}
-				CLIENT_MESSAGES.clear();
+			while(CLIENT_MESSAGES.size() > 0) {
+				Message msg = CLIENT_MESSAGES.front();
+				CLIENT_MESSAGES.pop_front();
+
+				Packet p;
+				p.size = msg.packet->dataLength;
+				p.message = msg.packet->data;
+				ClientMessage m = *(ClientMessage*)(p.message);
+				DebugLog("Message: %u", m.i);
+				enet_packet_destroy(msg.packet);
 			}
-			SDL_UnlockMutex(MESSAGE_MUTEX);
 
 			for(int i = 0; i < CLIENT_COUNT; ++i){
 				ServerMessage m;
 				m.i = 12234;
-	
+				
 				Packet p;
 				p.size = sizeof(m);
 				p.message = &m;

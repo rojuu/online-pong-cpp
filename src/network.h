@@ -6,14 +6,14 @@ struct Message{
 };
 
 struct Packet{
-    void* message;
-    Uint32 size;
+	void* message;
+	Uint32 size;
 };
 
 struct ServerMessage{
-    int i;
+	int i;
 };
 
 struct ClientMessage{
-    Uint32 i;
+	Uint32 i;
 };
