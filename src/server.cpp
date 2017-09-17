@@ -127,6 +127,8 @@ int run_server(int argc, char** argv) {
 		TimeFromStart = CurrentTime - StartTime;
 		DeltaTime = (float)(CurrentTime - LastTime);
 		TimeFromLastMessage += DeltaTime;
+		
+		if(DeltaTime > 0.1f) DeltaTime = 0.1f;
 
 		SDL_LockMutex(PRINT_MUTEX);
 		SDL_LockMutex(MESSAGE_MUTEX);

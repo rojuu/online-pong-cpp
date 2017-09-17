@@ -24,7 +24,7 @@ struct GameState
 {
 	Vector2 ballPosition;
 	Vector2 ballVelocity;
-	int paddleYs[GAME_PADDLE_COUNT];
+	float paddleYs[GAME_PADDLE_COUNT];
 };
 
 // Check if a circle is colliding with a rectangle. This is done swept, 
@@ -118,7 +118,7 @@ internal float SweptCircleWithRectangle(
 internal void update_state(float dt, GameState* gameState) {
 	float velocityX = gameState->ballVelocity.x * dt;
 	float velocityY = gameState->ballVelocity.y * dt;
-	float collisionTime = 1;
+	float collisionTime = 1.f;
 	float normalX = 0, normalY = 0;
 	
 
@@ -137,9 +137,9 @@ internal void update_state(float dt, GameState* gameState) {
 			&normalX, &normalY);
 	}
 
-	// Adjust for collision
-	if(collisionTime <= 1.f) {
-		if(normalY != 0){	
+	// Adjust for paddle collisions
+	if(collisionTime < 1.f) {
+		if(normalY != 0){
 			velocityY *= collisionTime;
 
 			velocityY *= -1;
@@ -151,14 +151,45 @@ internal void update_state(float dt, GameState* gameState) {
 			velocityX *= -1;
 			gameState->ballVelocity.x *= -1;
 
-			float positionMaxDiff = (BALL_RADIUS + PADDLE_HEIGHT);
-			float positionDiff = std::abs(gameState->ballPosition.y - gameState->paddleYs[paddleIdx]);
-			if(positionDiff <= positionMaxDiff){
-				velocityY += velocityY * (positionDiff / positionMaxDiff);
+			float diffMax = (BALL_RADIUS + PADDLE_HEIGHT);
+			float diff = gameState->ballPosition.y - gameState->paddleYs[paddleIdx];
+			float diffAbs = std::abs(diff);
+			float diffSign = diff / diffAbs;
+			if(diffAbs <= diffMax){
+				gameState->ballVelocity.y += (1 / (diff / diffMax)) * gameState->ballVelocity.y * 0.2f;
 			}
 		}
+
+		gameState->ballVelocity.x *= 1.2f;
+		gameState->ballVelocity.y *= 1.2f;
 	}
 	
 	gameState->ballPosition.x += velocityX;
 	gameState->ballPosition.y += velocityY;
+
+	// Wall collision
+	if(gameState->ballVelocity.x < 0){
+		if(gameState->ballPosition.x < 0){
+			gameState->ballPosition.x = 0;
+			gameState->ballVelocity.x *= -1;
+		}
+	}
+	if(gameState->ballVelocity.x > 0){
+		if(gameState->ballPosition.x > SCREEN_WIDTH){
+			gameState->ballPosition.x = SCREEN_WIDTH;
+			gameState->ballVelocity.x *= -1;
+		}
+	}
+	if(gameState->ballVelocity.y < 0){
+		if(gameState->ballPosition.y < 0){
+			gameState->ballPosition.y = 0;
+			gameState->ballVelocity.y *= -1;
+		}
+	}
+	if(gameState->ballVelocity.y > 0){
+		if(gameState->ballPosition.y > SCREEN_HEIGHT){
+			gameState->ballPosition.y = SCREEN_HEIGHT;
+			gameState->ballVelocity.y *= -1;
+		}
+	}
 }

@@ -160,6 +160,8 @@ int run_client(int argc, char** argv) {
 		DeltaTime = (float)(CurrentTime - LastTime);
 		TimeFromLastMessage += DeltaTime;
 
+		if(DeltaTime > 0.1f) DeltaTime = 0.1f;
+
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_QUIT) {
 					quit = true;
