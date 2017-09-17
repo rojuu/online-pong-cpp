@@ -41,7 +41,9 @@ internal int network_thread(void *ptr) {
 				}
 
 				case ENET_EVENT_TYPE_RECEIVE: {
-					DebugLog("Message from server : %s", event.packet->data);
+					//DebugLog("Message from server : %s", event.packet->data);
+					ServerMessage m = *(ServerMessage*)(event.packet->data);
+					DebugLog("Message from server : %i", m.i);
 					// Lets broadcast this message to all
 					// enet_host_broadcast(client, 0, event.packet);
 					enet_packet_destroy(event.packet);
@@ -171,14 +173,13 @@ int run_client(int argc, char** argv) {
 					e.type == SDL_MOUSEBUTTONDOWN ||
 					e.type == SDL_MOUSEBUTTONUP
 			) {
-					int x, y;
-					SDL_GetMouseState(&x, &y);
-					gameState.paddleYs[0] = y;
-					gameState.paddleYs[1] = y;
+				int x, y;
+				SDL_GetMouseState(&x, &y);
+				gameState.paddleYs[0] = y;
+				gameState.paddleYs[1] = y;
 			}
 		}
 
-		update_state(DeltaTime, &gameState);
 #if 1
 		if(hasConnection && TimeFromLastMessage > 1.f/NetworkRate) {
 			TimeFromLastMessage = 0;

@@ -13,19 +13,15 @@ SDL_mutex* PRINT_MUTEX;
 SDL_mutex* MESSAGE_MUTEX;
 
 const int MAX_CLIENTS = 2;
-internal ENetPeer client[MAX_CLIENTS] = { 0 };
-ENetHost *server;
+internal ENetPeer* client[MAX_CLIENTS] = { 0 };
+int CLIENT_COUNT = 0;
 
-struct Message {
-	ENetPacket* packet;
-	int clientID;
-};
+ENetHost *server;
 
 std::list<Message> CLIENT_MESSAGES;
 
 internal int network_thread(void *ptr) {
 	ENetEvent event;
-	int clientCount = 0;
 	int eventStatus;
 
 	DebugLog("Listening to port *%u", PORT);
@@ -34,7 +30,7 @@ internal int network_thread(void *ptr) {
 		if (eventStatus > 0) {
 			switch (event.type) {
 				case ENET_EVENT_TYPE_CONNECT: {
-					if (clientCount == MAX_CLIENTS) {
+					if (CLIENT_COUNT == MAX_CLIENTS) {
 						break;
 					}
 					SDL_LockMutex(PRINT_MUTEX);
@@ -43,7 +39,7 @@ internal int network_thread(void *ptr) {
 						event.peer->address.port);
 
 					SDL_UnlockMutex(PRINT_MUTEX);
-					client[clientCount++] = *event.peer;
+					client[CLIENT_COUNT++] = event.peer;
 					break;
 				}
 
@@ -60,7 +56,7 @@ internal int network_thread(void *ptr) {
 					Message m = { 0 };
 					m.packet = event.packet;
 					m.clientID =
-						client[0].connectID == event.peer->connectID ? 0 : 1;
+						client[0]->connectID == event.peer->connectID ? 0 : 1;
 					SDL_LockMutex(MESSAGE_MUTEX);
 					CLIENT_MESSAGES.push_back(m);
 					SDL_UnlockMutex(MESSAGE_MUTEX);
@@ -130,24 +126,38 @@ int run_server(int argc, char** argv) {
 		
 		if(DeltaTime > 0.1f) DeltaTime = 0.1f;
 
-		SDL_LockMutex(PRINT_MUTEX);
-		SDL_LockMutex(MESSAGE_MUTEX);
+		
 		if(TimeFromLastMessage > 1.f/NetworkRate) {
+			//SDL_LockMutex(PRINT_MUTEX);
+			//SDL_UnlockMutex(PRINT_MUTEX);
+
+			SDL_LockMutex(MESSAGE_MUTEX);
 			if(CLIENT_MESSAGES.size() > 0) {
 				for(auto msg : CLIENT_MESSAGES) {
 					Packet p;
 					p.size = msg.packet->dataLength;
 					p.message = msg.packet->data;
 					ClientMessage m = *(ClientMessage*)(p.message);
-					DebugLog("Message: %u", m.i);
+					//DebugLog("Message: %u", m.i);
 					enet_packet_destroy(msg.packet);
 				}
 				CLIENT_MESSAGES.clear();
 			}
-		}
-		SDL_UnlockMutex(MESSAGE_MUTEX);
+			SDL_UnlockMutex(MESSAGE_MUTEX);
 
-		SDL_UnlockMutex(PRINT_MUTEX);
+			for(int i = 0; i < CLIENT_COUNT; ++i){
+				ServerMessage m;
+				m.i = 12234;
+	
+				Packet p;
+				p.size = sizeof(m);
+				p.message = &m;
+				ENetPacket* packet = enet_packet_create(p.message, p.size,
+					ENET_PACKET_FLAG_RELIABLE);
+
+				enet_peer_send(client[i], 0, packet);
+			}
+		}
 	}
 	
 	return 0;
