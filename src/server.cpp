@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <queue>
 #include <list>
 #include "server.h"
 #include <enet/enet.h>
@@ -18,7 +19,7 @@ int CLIENT_COUNT = 0;
 
 ENetHost *server;
 
-std::list<Message> CLIENT_MESSAGES;
+std::queue<Message> CLIENT_MESSAGES;
 
 internal int network_thread(void *ptr) {
 	ENetEvent event;
@@ -56,7 +57,7 @@ internal int network_thread(void *ptr) {
 					m.packet = event.packet;
 					m.clientID =
 						client[0]->connectID == event.peer->connectID ? 0 : 1;
-					CLIENT_MESSAGES.push_back(m);
+					CLIENT_MESSAGES.push(m);
 					break;
 				}
 
@@ -79,11 +80,43 @@ internal void ExitCleanUp() {
 	enet_deinitialize();
 }
 
+struct DestroyPacket {
+	ENetPacket* packet;
+	Uint32 CreationTicks;
+	inline bool operator==(const DestroyPacket& rhs){
+		return (this->packet == rhs.packet) && (this->CreationTicks == rhs.CreationTicks);
+	}
+};
+
+std::list<DestroyPacket> SentPackets;
+
+internal int packet_destroyer(void *ptr) {
+	for(;;){
+		SDL_Delay(10);
+
+		for (std::list<DestroyPacket>::iterator it = SentPackets.begin();
+				it != --SentPackets.end();
+				++it
+		) {
+			if(SDL_GetTicks() - it->CreationTicks > 1000){
+				enet_packet_destroy(it->packet);
+				DeleteIts.push_back(it);
+			}
+		}
+		
+		for(auto it : DeleteIts){
+			SentPackets.erase(it);
+		}
+	}
+	return 0;
+}
+
 int run_server(int argc, char** argv) {
 	ENetAddress address;
 	atexit(ExitCleanUp);
 
 	SDL_Thread* network_t;
+	SDL_Thread* packet_destroyer_t;
 
 	PRINT_MUTEX = SDL_CreateMutex();
 
@@ -99,8 +132,9 @@ int run_server(int argc, char** argv) {
 		0	/* assume any amount of outgoing bandwidth */);
 
 	assert(server != NULL);
-	
+
 	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
+	packet_destroyer_t = SDL_CreateThread(packet_destroyer, "PacketDestroyer", (void*)NULL);
 
 	float CurrentTime = (float)SDL_GetPerformanceCounter() /
 							(float)SDL_GetPerformanceFrequency();
@@ -111,23 +145,23 @@ int run_server(int argc, char** argv) {
 	float NetworkRate = 60; //How many messages per second
 	float TimeFromLastMessage = 1 / NetworkRate;
 
-	while(1) {
+	for(;;) {
 		LastTime = CurrentTime;
 		CurrentTime = (float)SDL_GetPerformanceCounter() /
 			(float)SDL_GetPerformanceFrequency();
 		TimeFromStart = CurrentTime - StartTime;
 		DeltaTime = (float)(CurrentTime - LastTime);
 		TimeFromLastMessage += DeltaTime;
-		
+
 		if(DeltaTime > 0.1f) DeltaTime = 0.1f;
 
 		if(TimeFromLastMessage > 1.f/NetworkRate) {
 			//SDL_LockMutex(PRINT_MUTEX);
 			//SDL_UnlockMutex(PRINT_MUTEX);
 
-			while(CLIENT_MESSAGES.size() > 0) {
+			while(!CLIENT_MESSAGES.empty()) {
 				Message msg = CLIENT_MESSAGES.front();
-				CLIENT_MESSAGES.pop_front();
+				CLIENT_MESSAGES.pop();
 
 				Packet p;
 				p.size = msg.packet->dataLength;
@@ -140,17 +174,22 @@ int run_server(int argc, char** argv) {
 			for(int i = 0; i < CLIENT_COUNT; ++i){
 				ServerMessage m;
 				m.i = 12234;
-				
+
 				Packet p;
 				p.size = sizeof(m);
 				p.message = &m;
 				ENetPacket* packet = enet_packet_create(p.message, p.size,
 					ENET_PACKET_FLAG_RELIABLE);
 
-				enet_peer_send(client[i], 0, packet);
+				//enet_peer_send(client[i], 0, packet);
+
+				DestroyPacket dp;
+				dp.packet = packet;
+				dp.CreationTicks = SDL_GetTicks();
+				SentPackets.push_back(dp);
 			}
 		}
 	}
-	
+
 	return 0;
 }
