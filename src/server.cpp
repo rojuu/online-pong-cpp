@@ -27,7 +27,7 @@ internal int network_thread(void *ptr) {
 
 	DebugLog("Listening to port *%u", PORT);
 	while (1) {
-		eventStatus = enet_host_service(server, &event, 1000);
+		eventStatus = enet_host_service(server, &event, 3000);
 		if (eventStatus > 0) {
 			switch (event.type) {
 				case ENET_EVENT_TYPE_CONNECT: {
@@ -80,37 +80,6 @@ internal void ExitCleanUp() {
 	enet_deinitialize();
 }
 
-struct DestroyPacket {
-	ENetPacket* packet;
-	Uint32 CreationTicks;
-	inline bool operator==(const DestroyPacket& rhs){
-		return (this->packet == rhs.packet) && (this->CreationTicks == rhs.CreationTicks);
-	}
-};
-
-std::list<DestroyPacket> SentPackets;
-
-internal int packet_destroyer(void *ptr) {
-	for(;;){
-		SDL_Delay(10);
-
-		for (std::list<DestroyPacket>::iterator it = SentPackets.begin();
-				it != --SentPackets.end();
-				++it
-		) {
-			if(SDL_GetTicks() - it->CreationTicks > 1000){
-				enet_packet_destroy(it->packet);
-				DeleteIts.push_back(it);
-			}
-		}
-		
-		for(auto it : DeleteIts){
-			SentPackets.erase(it);
-		}
-	}
-	return 0;
-}
-
 int run_server(int argc, char** argv) {
 	ENetAddress address;
 	atexit(ExitCleanUp);
@@ -134,7 +103,6 @@ int run_server(int argc, char** argv) {
 	assert(server != NULL);
 
 	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
-	packet_destroyer_t = SDL_CreateThread(packet_destroyer, "PacketDestroyer", (void*)NULL);
 
 	float CurrentTime = (float)SDL_GetPerformanceCounter() /
 							(float)SDL_GetPerformanceFrequency();
@@ -158,6 +126,8 @@ int run_server(int argc, char** argv) {
 		if(TimeFromLastMessage > 1.f/NetworkRate) {
 			//SDL_LockMutex(PRINT_MUTEX);
 			//SDL_UnlockMutex(PRINT_MUTEX);
+			
+			TimeFromLastMessage = 0;
 
 			while(!CLIENT_MESSAGES.empty()) {
 				Message msg = CLIENT_MESSAGES.front();
@@ -181,12 +151,7 @@ int run_server(int argc, char** argv) {
 				ENetPacket* packet = enet_packet_create(p.message, p.size,
 					ENET_PACKET_FLAG_RELIABLE);
 
-				//enet_peer_send(client[i], 0, packet);
-
-				DestroyPacket dp;
-				dp.packet = packet;
-				dp.CreationTicks = SDL_GetTicks();
-				SentPackets.push_back(dp);
+				enet_peer_send(client[i], 0, packet);
 			}
 		}
 	}
