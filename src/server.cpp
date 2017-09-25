@@ -7,6 +7,7 @@
 #include "SDL.h"
 #include "logging.h"
 #include "network.h"
+#include "game.cpp"
 
 const Uint16 PORT = 8080;
 
@@ -18,6 +19,11 @@ internal ENetPeer* client[MAX_CLIENTS] = { 0 };
 int CLIENT_COUNT = 0;
 
 ENetHost *server;
+
+struct Message{
+	ENetPacket* packet;
+	int clientID;
+};
 
 std::queue<Message> CLIENT_MESSAGES;
 
@@ -45,14 +51,14 @@ internal int network_thread(void *ptr) {
 				}
 
 				case ENET_EVENT_TYPE_RECEIVE: {
-					SDL_LockMutex(PRINT_MUTEX);
-					DebugLog(
-						"A packet of length %u received from ID: %u on channel %u.",
-						event.packet->dataLength,
-						event.peer->connectID,
-						event.channelID);
+					//SDL_LockMutex(PRINT_MUTEX);
+					// DebugLog(
+					// 	"A packet of length %u received from ID: %u on channel %u.",
+					// 	event.packet->dataLength,
+					// 	event.peer->connectID,
+					// 	event.channelID);
+					//SDL_UnlockMutex(PRINT_MUTEX);
 
-					SDL_UnlockMutex(PRINT_MUTEX);
 					Message m = { 0 };
 					m.packet = event.packet;
 					m.clientID =
@@ -104,6 +110,14 @@ int run_server(int argc, char** argv) {
 
 	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
 
+	GameState gameState;
+	gameState.ballPosition = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
+	gameState.ballVelocity = { -100.f, 10.f };
+
+	for (int i = 0; i < GAME_PADDLE_COUNT; ++i) {
+		gameState.paddleYs[i] = SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2;
+	}
+
 	float CurrentTime = (float)SDL_GetPerformanceCounter() /
 							(float)SDL_GetPerformanceFrequency();
 	float StartTime = CurrentTime;
@@ -111,7 +125,7 @@ int run_server(int argc, char** argv) {
 	float LastTime = 0;
 	float DeltaTime = 0;
 	float NetworkRate = 60; //How many messages per second
-	float TimeFromLastMessage = 1 / NetworkRate;
+	float TimeFromLastMessage = 1.f / NetworkRate;
 
 	for(;;) {
 		LastTime = CurrentTime;
@@ -123,27 +137,30 @@ int run_server(int argc, char** argv) {
 
 		if(DeltaTime > 0.1f) DeltaTime = 0.1f;
 
+		update_state(DeltaTime, &gameState);
+
 		if(TimeFromLastMessage > 1.f/NetworkRate) {
+			TimeFromLastMessage = 0;
+
 			//SDL_LockMutex(PRINT_MUTEX);
 			//SDL_UnlockMutex(PRINT_MUTEX);
 			
-			TimeFromLastMessage = 0;
-
+			Message* msg = 0;
 			while(!CLIENT_MESSAGES.empty()) {
-				Message msg = CLIENT_MESSAGES.front();
+				msg = &CLIENT_MESSAGES.front();
 				CLIENT_MESSAGES.pop();
+			}
 
-				Packet p;
-				p.size = msg.packet->dataLength;
-				p.message = msg.packet->data;
-				ClientMessage m = *(ClientMessage*)(p.message);
+			if(msg) {
+				ClientMessage m = *(ClientMessage*)(msg->packet->data);
 				DebugLog("Message: %u", m.i);
-				enet_packet_destroy(msg.packet);
+				enet_packet_destroy(msg->packet);
 			}
 
 			for(int i = 0; i < CLIENT_COUNT; ++i){
 				ServerMessage m;
-				m.i = 12234;
+				m.state = gameState;
+				m.clientId = i;
 
 				Packet p;
 				p.size = sizeof(m);

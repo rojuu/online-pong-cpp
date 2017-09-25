@@ -7,6 +7,7 @@
 #include "logging.h"
 #include "network.h"
 #include "game.cpp"
+#include <queue>
 
 
 const char* HOST = "127.0.0.1";
@@ -23,6 +24,9 @@ internal void ExitCleanUp(){
 	enet_deinitialize();
 	SDL_DestroyWindow(window);
 }
+
+
+std::queue<ENetPacket*> SERVER_MESSAGE;
 
 internal int network_thread(void *ptr) {
 	//NETWORK MESSAGE
@@ -41,12 +45,7 @@ internal int network_thread(void *ptr) {
 				}
 
 				case ENET_EVENT_TYPE_RECEIVE: {
-					//DebugLog("Message from server : %s", event.packet->data);
-					ServerMessage m = *(ServerMessage*)(event.packet->data);
-					DebugLog("Message from server : %i", m.i);
-					// Lets broadcast this message to all
-					// enet_host_broadcast(client, 0, event.packet);
-					enet_packet_destroy(event.packet);
+					SERVER_MESSAGE.push(event.packet);
 					break;
 				}
 
@@ -149,7 +148,7 @@ int run_client(int argc, char** argv) {
 	float LastTime = 0;
 	float DeltaTime = 0;
 	float NetworkRate = 60; //How many messages per second
-	float TimeFromLastMessage = 1 / NetworkRate;
+	float TimeFromLastMessage = 1.f / NetworkRate;
 
 //MAIN LOOP
 #if 1
@@ -166,33 +165,58 @@ int run_client(int argc, char** argv) {
 
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_QUIT) {
-					quit = true;
+				quit = true;
 			}
 
 			if (e.type == SDL_MOUSEMOTION ||
-					e.type == SDL_MOUSEBUTTONDOWN ||
-					e.type == SDL_MOUSEBUTTONUP
+				e.type == SDL_MOUSEBUTTONDOWN ||
+				e.type == SDL_MOUSEBUTTONUP
 			) {
 				int x, y;
 				SDL_GetMouseState(&x, &y);
 				gameState.paddleYs[0] = y;
-				gameState.paddleYs[1] = y;
 			}
 		}
 
+//NETWORKING
 #if 1
 		if(hasConnection && TimeFromLastMessage > 1.f/NetworkRate) {
 			TimeFromLastMessage = 0;
-			ClientMessage m;
-			m.i = gameState.paddleYs[0];
-			Packet p;
-			p.size = sizeof(m);
-			p.message = &m;
-			ENetPacket* packet = enet_packet_create(p.message, p.size,
-				ENET_PACKET_FLAG_RELIABLE);
-			enet_peer_send(server, 0, packet);
+
+			{
+				ENetPacket* p = 0;
+				while(!SERVER_MESSAGE.empty()) {
+					p = SERVER_MESSAGE.front();
+					SERVER_MESSAGE.pop();
+				}
+
+				if(p) {
+					ServerMessage m = *(ServerMessage*)p->data;
+					
+					DebugLog("Ballposition %f", m.state.ballPosition.x);
+
+					int opponentId = (m.clientId - 1) * -1;
+					gameState.paddleYs[1] = m.state.paddleYs[opponentId];
+					gameState.ballPosition = m.state.ballPosition;
+					gameState.ballVelocity = m.state.ballVelocity;
+
+					enet_packet_destroy(p);
+				}
+			}
+
+			{
+				ClientMessage m;
+				m.i = gameState.paddleYs[0];
+				Packet p;
+				p.size = sizeof(m);
+				p.message = &m;
+				ENetPacket* packet = enet_packet_create(p.message, p.size,
+					ENET_PACKET_FLAG_RELIABLE);
+				enet_peer_send(server, 0, packet);
+			}
 		}
 #endif
+//NETWORKING END
 
 //RENDERING
 #if 1

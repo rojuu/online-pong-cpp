@@ -1,9 +1,6 @@
 #pragma once
 
-struct Message{
-	ENetPacket* packet;
-	int clientID;
-};
+#include "game.cpp"
 
 struct Packet{
 	void* message;
@@ -11,7 +8,8 @@ struct Packet{
 };
 
 struct ServerMessage{
-	int i;
+	GameState state;
+	int clientId;
 };
 
 struct ClientMessage{
