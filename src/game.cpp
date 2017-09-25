@@ -25,6 +25,7 @@ struct GameState
 	Vector2 ballPosition;
 	Vector2 ballVelocity;
 	float paddleYs[GAME_PADDLE_COUNT];
+	int scores[GAME_PADDLE_COUNT];
 };
 
 // Check if a circle is colliding with a rectangle. This is done swept, 
@@ -168,25 +169,32 @@ internal void update_state(float dt, GameState* gameState) {
 	gameState->ballPosition.y += velocityY;
 
 	// Wall collision
-	if(gameState->ballVelocity.x < 0){
+	if(gameState->ballVelocity.x < 0) {
 		if(gameState->ballPosition.x < 0){
-			gameState->ballPosition.x = 0;
-			gameState->ballVelocity.x *= -1;
+		// 	gameState->ballPosition.x = 0;
+		// 	gameState->ballVelocity.x *= -1;
+			gameState->ballPosition = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
+			gameState->ballVelocity = { -100.f, 10.f };
+			gameState->scores[0]++;
 		}
+
 	}
-	if(gameState->ballVelocity.x > 0){
+	if(gameState->ballVelocity.x > 0) {
 		if(gameState->ballPosition.x > SCREEN_WIDTH){
-			gameState->ballPosition.x = SCREEN_WIDTH;
-			gameState->ballVelocity.x *= -1;
+		// 	gameState->ballPosition.x = SCREEN_WIDTH;
+		// 	gameState->ballVelocity.x *= -1;
+			gameState->ballPosition = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
+			gameState->ballVelocity = { 100.f, 10.f };
+			gameState->scores[1]++;
 		}
 	}
-	if(gameState->ballVelocity.y < 0){
+	if(gameState->ballVelocity.y < 0) {
 		if(gameState->ballPosition.y < 0){
 			gameState->ballPosition.y = 0;
 			gameState->ballVelocity.y *= -1;
 		}
 	}
-	if(gameState->ballVelocity.y > 0){
+	if(gameState->ballVelocity.y > 0) {
 		if(gameState->ballPosition.y > SCREEN_HEIGHT){
 			gameState->ballPosition.y = SCREEN_HEIGHT;
 			gameState->ballVelocity.y *= -1;

@@ -90,14 +90,14 @@ int run_client(int argc, char** argv) {
 	enet_address_set_host(&address, "localhost");
 	address.port = PORT;
 
-		 
+
 	server = enet_host_connect(client, &address, 2, 0);
 
 	if (server == NULL) {
 		DebugLog("No available peers for initializing an ENet connection");
 		hasConnection = false;
 	}
-		
+
 	window = SDL_CreateWindow("Pong",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		SCREEN_WIDTH, SCREEN_HEIGHT,
@@ -193,12 +193,12 @@ int run_client(int argc, char** argv) {
 
 				if(p) {
 					ServerMessage m = *(ServerMessage*)p->data;
-					
-					DebugLog("Ballposition %f", m.state.ballPosition.x);
 
 					int opponentId = (m.clientId - 1) * -1;
+					int ourId = m.clientId;
+
 					gameState.paddleYs[1] = m.state.paddleYs[opponentId];
-					if(m.clientId == 0) {
+					if(ourId == 0) {
 						gameState.ballPosition = m.state.ballPosition;
 					} else {
 						float x = m.state.ballPosition.x - SCREEN_WIDTH;
@@ -206,6 +206,15 @@ int run_client(int argc, char** argv) {
 
 						gameState.ballPosition.x = x;
 						gameState.ballPosition.y = m.state.ballPosition.y;
+					}
+					
+					if(gameState.scores[0] != m.state.scores[0] ||
+						gameState.scores[1] != m.state.scores[1]
+					) {
+						gameState.scores[0] = m.state.scores[0];
+						gameState.scores[1] = m.state.scores[1];
+						DebugLog("Score: %d - %d", 
+							gameState.scores[ourId], gameState.scores[opponentId]);
 					}
 
 					enet_packet_destroy(p);

@@ -19,6 +19,8 @@ const int MAX_CLIENTS = 2;
 internal ENetPeer* client[MAX_CLIENTS] = { 0 };
 int CLIENT_COUNT = 0;
 
+internal bool GAME_RUNNING = false;
+
 ENetHost *server;
 
 struct Message{
@@ -48,6 +50,10 @@ internal int network_thread(void *ptr) {
 
 					SDL_UnlockMutex(PRINT_MUTEX);
 					client[CLIENT_COUNT++] = event.peer;
+
+					if(CLIENT_COUNT == MAX_CLIENTS) {
+						GAME_RUNNING = true;
+					}
 					break;
 				}
 
@@ -116,6 +122,7 @@ int run_server(int argc, char** argv) {
 
 	for (int i = 0; i < GAME_PADDLE_COUNT; ++i) {
 		gameState.paddleYs[i] = SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2;
+		gameState.scores[i] = 0;
 	}
 
 	float CurrentTime = (float)SDL_GetPerformanceCounter() /
@@ -137,7 +144,9 @@ int run_server(int argc, char** argv) {
 
 		if(DeltaTime > 0.1f) DeltaTime = 0.1f;
 
-		update_state(DeltaTime, &gameState);
+		if(GAME_RUNNING) {
+			update_state(DeltaTime, &gameState);
+		}
 
 		if(TimeFromLastMessage > 1.f/NetworkRate) {
 			TimeFromLastMessage = 0;
@@ -157,13 +166,12 @@ int run_server(int argc, char** argv) {
 			for(int i = 0; i < CLIENT_COUNT; ++i) {
 				if(hadMessages[i]) {
 					ClientMessage m = *(ClientMessage*)(messages[i].packet->data);
-					DebugLog("Message: %f", m.paddleY);
 					gameState.paddleYs[i] = m.paddleY;
 					enet_packet_destroy(messages[i].packet);
 				}
 			}
 
-			for(int i = 0; i < CLIENT_COUNT; ++i){
+			for(int i = 0; i < CLIENT_COUNT; ++i) {
 				ServerMessage m;
 				m.state = gameState;
 				m.clientId = i;
