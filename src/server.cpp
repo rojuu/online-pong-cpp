@@ -10,6 +10,7 @@
 #include "game.cpp"
 
 const Uint16 PORT = 8080;
+const int NETWORK_RATE = 60;
 
 SDL_mutex* PRINT_MUTEX;
 //SDL_mutex* MESSAGE_MUTEX;
@@ -33,7 +34,7 @@ internal int network_thread(void *ptr) {
 
 	DebugLog("Listening to port *%u", PORT);
 	while (1) {
-		eventStatus = enet_host_service(server, &event, 3000);
+		eventStatus = enet_host_service(server, &event, 1.f/(float)NETWORK_RATE);
 		if (eventStatus > 0) {
 			switch (event.type) {
 				case ENET_EVENT_TYPE_CONNECT: {
@@ -58,7 +59,6 @@ internal int network_thread(void *ptr) {
 					// 	event.peer->connectID,
 					// 	event.channelID);
 					//SDL_UnlockMutex(PRINT_MUTEX);
-
 					Message m = { 0 };
 					m.packet = event.packet;
 					m.clientID =
@@ -124,7 +124,7 @@ int run_server(int argc, char** argv) {
 	float TimeFromStart = CurrentTime - StartTime;
 	float LastTime = 0;
 	float DeltaTime = 0;
-	float NetworkRate = 60; //How many messages per second
+	float NetworkRate = NETWORK_RATE; //How many messages per second
 	float TimeFromLastMessage = 1.f / NetworkRate;
 
 	for(;;) {
@@ -141,20 +141,26 @@ int run_server(int argc, char** argv) {
 
 		if(TimeFromLastMessage > 1.f/NetworkRate) {
 			TimeFromLastMessage = 0;
-
 			//SDL_LockMutex(PRINT_MUTEX);
 			//SDL_UnlockMutex(PRINT_MUTEX);
 			
-			Message* msg = 0;
+			Message messages[MAX_CLIENTS];
+			bool hadMessages[MAX_CLIENTS] = { false };
 			while(!CLIENT_MESSAGES.empty()) {
-				msg = &CLIENT_MESSAGES.front();
+				Message m = CLIENT_MESSAGES.front();
 				CLIENT_MESSAGES.pop();
+
+				messages[m.clientID] = m;
+				hadMessages[m.clientID] = true;
 			}
 
-			if(msg) {
-				ClientMessage m = *(ClientMessage*)(msg->packet->data);
-				DebugLog("Message: %u", m.i);
-				enet_packet_destroy(msg->packet);
+			for(int i = 0; i < CLIENT_COUNT; ++i) {
+				if(hadMessages[i]) {
+					ClientMessage m = *(ClientMessage*)(messages[i].packet->data);
+					DebugLog("Message: %f", m.paddleY);
+					gameState.paddleYs[i] = m.paddleY;
+					enet_packet_destroy(messages[i].packet);
+				}
 			}
 
 			for(int i = 0; i < CLIENT_COUNT; ++i){

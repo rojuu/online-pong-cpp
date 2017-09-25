@@ -12,6 +12,7 @@
 
 const char* HOST = "127.0.0.1";
 const Uint16 PORT = 8080;
+const int NETWORK_RATE = 60;
 ENetHost * client;
 ENetPeer * server;
 
@@ -34,7 +35,7 @@ internal int network_thread(void *ptr) {
 	ENetEvent event;
 	int eventStatus;
 	while (runNetwork){
-		eventStatus = enet_host_service(client, &event, 3000);
+		eventStatus = enet_host_service(client, &event, 1.f/(float)NETWORK_RATE);
 		if (eventStatus > 0) {
 			switch (event.type) {
 				case ENET_EVENT_TYPE_CONNECT: {
@@ -147,7 +148,7 @@ int run_client(int argc, char** argv) {
 	float TimeFromStart = CurrentTime - StartTime;
 	float LastTime = 0;
 	float DeltaTime = 0;
-	float NetworkRate = 60; //How many messages per second
+	float NetworkRate = NETWORK_RATE; //How many messages per second
 	float TimeFromLastMessage = 1.f / NetworkRate;
 
 //MAIN LOOP
@@ -197,8 +198,15 @@ int run_client(int argc, char** argv) {
 
 					int opponentId = (m.clientId - 1) * -1;
 					gameState.paddleYs[1] = m.state.paddleYs[opponentId];
-					gameState.ballPosition = m.state.ballPosition;
-					gameState.ballVelocity = m.state.ballVelocity;
+					if(m.clientId == 0) {
+						gameState.ballPosition = m.state.ballPosition;
+					} else {
+						float x = m.state.ballPosition.x - SCREEN_WIDTH;
+						x *= -1;
+
+						gameState.ballPosition.x = x;
+						gameState.ballPosition.y = m.state.ballPosition.y;
+					}
 
 					enet_packet_destroy(p);
 				}
@@ -206,7 +214,7 @@ int run_client(int argc, char** argv) {
 
 			{
 				ClientMessage m;
-				m.i = gameState.paddleYs[0];
+				m.paddleY = gameState.paddleYs[0];
 				Packet p;
 				p.size = sizeof(m);
 				p.message = &m;
