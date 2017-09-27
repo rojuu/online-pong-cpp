@@ -8,6 +8,7 @@
 #include "logging.h"
 #include "network.h"
 #include "game.cpp"
+#include <time.h>
 
 const Uint16 PORT = 8080;
 const int NETWORK_RATE = 60;
@@ -18,6 +19,8 @@ SDL_mutex* PRINT_MUTEX;
 const int MAX_CLIENTS = 2;
 internal ENetPeer* client[MAX_CLIENTS] = { 0 };
 int CLIENT_COUNT = 0;
+
+const int FAKE_LAG_MS = 0;
 
 internal bool GAME_RUNNING = false;
 
@@ -86,6 +89,39 @@ internal int network_thread(void *ptr) {
 	}
 }
 
+struct DelayedPacket {
+	ENetPacket* packet;
+	ENetPeer* client;
+	Uint32 timeStamp;
+};
+
+std::queue<DelayedPacket> DELAYED_PACKETS;
+
+void send_packet(ENetPacket* packet, ENetPeer* client) {
+	DelayedPacket p;
+	p.packet = packet;
+	p.client = client;
+	p.timeStamp = SDL_GetTicks();
+	DELAYED_PACKETS.push(p);
+}
+
+internal int packet_sender_thread(void* ptr) {
+	for(;;) {
+		SDL_Delay(1);
+
+		while(!DELAYED_PACKETS.empty()) {
+			DelayedPacket p = DELAYED_PACKETS.front();
+			Uint32 timeFromPacketCreation =  SDL_GetTicks() - p.timeStamp;
+			if(timeFromPacketCreation > FAKE_LAG_MS) {
+				enet_peer_send(p.client, 0, p.packet);
+				DELAYED_PACKETS.pop();
+			} else {
+				break;
+			}
+		}
+	}
+}
+
 internal void ExitCleanUp() {
 	SDL_DestroyMutex(PRINT_MUTEX);
 	enet_host_destroy(server);
@@ -97,7 +133,7 @@ int run_server(int argc, char** argv) {
 	atexit(ExitCleanUp);
 
 	SDL_Thread* network_t;
-	SDL_Thread* packet_destroyer_t;
+	SDL_Thread* packet_sender_t;
 
 	PRINT_MUTEX = SDL_CreateMutex();
 
@@ -115,6 +151,7 @@ int run_server(int argc, char** argv) {
 	assert(server != NULL);
 
 	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
+	packet_sender_t = SDL_CreateThread(packet_sender_thread, "PacketSender", (void*)NULL);
 
 	GameState gameState;
 	gameState.ballPosition = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
@@ -182,7 +219,8 @@ int run_server(int argc, char** argv) {
 				ENetPacket* packet = enet_packet_create(p.message, p.size,
 					ENET_PACKET_FLAG_RELIABLE);
 
-				enet_peer_send(client[i], 0, packet);
+				//enet_peer_send(client[i], 0, packet);
+				send_packet(packet, client[i]);
 			}
 		}
 	}

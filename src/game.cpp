@@ -113,7 +113,6 @@ internal float SweptCircleWithRectangle(
 		// return the time of collision
 		return entryTime;
 	}
-
 }
 
 internal void update_state(float dt, GameState* gameState) {
@@ -152,12 +151,12 @@ internal void update_state(float dt, GameState* gameState) {
 			velocityX *= -1;
 			gameState->ballVelocity.x *= -1;
 
-			float diffMax = (BALL_RADIUS + PADDLE_HEIGHT);
-			float diff = gameState->ballPosition.y - gameState->paddleYs[paddleIdx];
-			float diffAbs = std::abs(diff);
-			float diffSign = diff / diffAbs;
-			if(diffAbs <= diffMax){
-				gameState->ballVelocity.y += (1 / (diff / diffMax)) * gameState->ballVelocity.y * 0.2f;
+			// Switching directions based on ballPosition in relation to paddle's
+			float dir = gameState->ballPosition.y - gameState->paddleYs[paddleIdx];
+			if(dir < 0 && gameState->ballVelocity.y > 0) {
+				gameState->ballVelocity.y *= -1;
+			} else if(dir > 0 && gameState->ballVelocity.y < 0) {
+				gameState->ballVelocity.y *= -1;
 			}
 		}
 
