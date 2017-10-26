@@ -87,11 +87,26 @@ int run_client(int argc, char** argv) {
 		hasConnection = false;
 	}
 
-	enet_address_set_host(&address, "localhost");
+	FILE *IpFile = fopen("SERVERADDRESS", "r");
+	
+	char serverAddress[64] = {};
+	serverAddress[0] = '\0';
+
+	if(IpFile){
+		fgets(serverAddress, 64, IpFile);
+		DebugLog("Address from file: %s", serverAddress);
+	} else {
+		DebugLog("%d", IpFile);
+	}
+
+	enet_address_set_host(&address, serverAddress);
 	address.port = PORT;
-
-
 	server = enet_host_connect(client, &address, 2, 0);
+	if(server == NULL) {
+		enet_address_set_host(&address, "localhost");
+		address.port = PORT;
+		server = enet_host_connect(client, &address, 2, 0);
+	}	
 
 	if (server == NULL) {
 		DebugLog("No available peers for initializing an ENet connection");

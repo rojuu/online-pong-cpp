@@ -17,7 +17,7 @@ SDL_mutex* PRINT_MUTEX;
 //SDL_mutex* MESSAGE_MUTEX;
 
 const int MAX_CLIENTS = 2;
-internal ENetPeer* client[MAX_CLIENTS] = { 0 };
+internal ENetPeer* client[MAX_CLIENTS] = {};
 int CLIENT_COUNT = 0;
 
 const int FAKE_LAG_MS = 0;
