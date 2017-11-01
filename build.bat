@@ -1,10 +1,6 @@
 @echo off
 SETLOCAL
-set TARGET=x86
-
-if not defined DevEnvDir (
-call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" %TARGET%
-)
+set TARGET=x64
 
 set SDL_INC=%SDL2%\include
 set SDL_LIB=%SDL2%\lib\%TARGET%
@@ -19,7 +15,7 @@ IF %TARGET%==x64 (
     set ENET_LIBFILE=enet64.lib
 )
 
-set CommonCompilerFlags=/Zi /EHsc /nologo /FC /I%SDL_INC% /I%ENET_INC%
+set CommonCompilerFlags=/Zi /Od /EHsc /nologo /FC /I%SDL_INC% /I%ENET_INC%
 
 set CommonLinkerFlags=/DEBUG /LIBPATH:%SDL_LIB% /LIBPATH:%ENET_LIB% SDL2.lib SDL2main.lib %ENET_LIBFILE% winmm.lib ws2_32.lib
 
