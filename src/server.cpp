@@ -98,11 +98,15 @@ struct DelayedPacket {
 std::queue<DelayedPacket> DELAYED_PACKETS;
 
 void send_packet(ENetPacket* packet, ENetPeer* client) {
-	DelayedPacket p;
-	p.packet = packet;
-	p.client = client;
-	p.timeStamp = SDL_GetTicks();
-	DELAYED_PACKETS.push(p);
+	if(FAKE_LAG_MS == 0) {
+		enet_peer_send(client, 0, packet);
+	} else {
+		DelayedPacket p;
+		p.packet = packet;
+		p.client = client;
+		p.timeStamp = SDL_GetTicks();
+		DELAYED_PACKETS.push(p);
+	}
 }
 
 internal int packet_sender_thread(void* ptr) {
@@ -151,7 +155,10 @@ int run_server(int argc, char** argv) {
 	assert(server != NULL);
 
 	network_t = SDL_CreateThread(network_thread, "NetworkThread", (void*)NULL);
-	packet_sender_t = SDL_CreateThread(packet_sender_thread, "PacketSender", (void*)NULL);
+
+	if(FAKE_LAG_MS > 0) { //This thread sends delayed packets, so we don't need it if there is no fake lag
+		packet_sender_t = SDL_CreateThread(packet_sender_thread, "PacketSender", (void*)NULL);
+	}
 
 	GameState gameState;
 	gameState.ballPosition = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
