@@ -3,22 +3,22 @@
 #include <string.h>
 #include "client.h"
 #include <enet/enet.h>
-#include "SDL.h"
+#include <SDL2/SDL.h>
 #include "logging.h"
 #include "network.h"
 #include "game.cpp"
 #include <queue>
 
 
-const char* HOST = "127.0.0.1";
-const Uint16 PORT = 8080;
-const int NETWORK_RATE = 60;
-ENetHost * client;
-ENetPeer * server;
+static const char* HOST = "127.0.0.1";
+static const Uint16 PORT = 8080;
+static const int NETWORK_RATE = 60;
+static ENetHost * client;
+static ENetPeer * server;
 
-SDL_Window* window;
+static SDL_Window* window;
 
-bool runNetwork = true;
+static bool runNetwork = true;
 internal void ExitCleanUp(){
 	runNetwork = false;
 	enet_host_destroy(client);
@@ -27,7 +27,7 @@ internal void ExitCleanUp(){
 }
 
 
-std::queue<ENetPacket*> SERVER_MESSAGE;
+static std::queue<ENetPacket*> SERVER_MESSAGE;
 
 internal int network_thread(void *ptr) {
 	//NETWORK MESSAGE

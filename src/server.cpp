@@ -4,34 +4,34 @@
 #include <list>
 #include "server.h"
 #include <enet/enet.h>
-#include "SDL.h"
+#include <SDL2/SDL.h>
 #include "logging.h"
 #include "network.h"
 #include "game.cpp"
 #include <time.h>
 
-const Uint16 PORT = 8080;
-const int NETWORK_RATE = 60;
+static const Uint16 PORT = 8080;
+static const int NETWORK_RATE = 60;
 
-SDL_mutex* PRINT_MUTEX;
-//SDL_mutex* MESSAGE_MUTEX;
+static SDL_mutex* PRINT_MUTEX;
+//static SDL_mutex* MESSAGE_MUTEX;
 
-const int MAX_CLIENTS = 2;
+static const int MAX_CLIENTS = 2;
 internal ENetPeer* client[MAX_CLIENTS] = {};
-int CLIENT_COUNT = 0;
+static int CLIENT_COUNT = 0;
 
-const int FAKE_LAG_MS = 0;
+static const int FAKE_LAG_MS = 0;
 
 internal bool GAME_RUNNING = false;
 
-ENetHost *server;
+static ENetHost *server;
 
 struct Message{
 	ENetPacket* packet;
 	int clientID;
 };
 
-std::queue<Message> CLIENT_MESSAGES;
+static std::queue<Message> CLIENT_MESSAGES;
 
 internal int network_thread(void *ptr) {
 	ENetEvent event;
@@ -95,9 +95,9 @@ struct DelayedPacket {
 	Uint32 timeStamp;
 };
 
-std::queue<DelayedPacket> DELAYED_PACKETS;
+static std::queue<DelayedPacket> DELAYED_PACKETS;
 
-void send_packet(ENetPacket* packet, ENetPeer* client) {
+static void send_packet(ENetPacket* packet, ENetPeer* client) {
 	if(FAKE_LAG_MS == 0) {
 		enet_peer_send(client, 0, packet);
 	} else {

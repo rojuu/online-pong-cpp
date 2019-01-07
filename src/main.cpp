@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "main.h"
 #include <enet/enet.h>
-#include "SDL.h"
+#include <SDL2/SDL.h>
 #include "logging.h"
 #include "client.h"
 #include "server.h"
