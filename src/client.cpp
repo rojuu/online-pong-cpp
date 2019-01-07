@@ -10,15 +10,15 @@
 #include <queue>
 
 
-static const char* HOST = "127.0.0.1";
-static const Uint16 PORT = 8080;
-static const int NETWORK_RATE = 60;
-static ENetHost * client;
-static ENetPeer * server;
+internal const char* HOST = "127.0.0.1";
+internal const Uint16 PORT = 8080;
+internal const int NETWORK_RATE = 60;
+internal ENetHost * client;
+internal ENetPeer * server;
 
-static SDL_Window* window;
+internal SDL_Window* window;
 
-static bool runNetwork = true;
+internal bool runNetwork = true;
 internal void ExitCleanUp(){
 	runNetwork = false;
 	enet_host_destroy(client);
@@ -27,7 +27,7 @@ internal void ExitCleanUp(){
 }
 
 
-static std::queue<ENetPacket*> SERVER_MESSAGE;
+internal std::queue<ENetPacket*> SERVER_MESSAGE;
 
 internal int network_thread(void *ptr) {
 	//NETWORK MESSAGE

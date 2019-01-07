@@ -10,28 +10,28 @@
 #include "game.cpp"
 #include <time.h>
 
-static const Uint16 PORT = 8080;
-static const int NETWORK_RATE = 60;
+internal const Uint16 PORT = 8080;
+internal const int NETWORK_RATE = 60;
 
-static SDL_mutex* PRINT_MUTEX;
-//static SDL_mutex* MESSAGE_MUTEX;
+internal SDL_mutex* PRINT_MUTEX;
+//internal SDL_mutex* MESSAGE_MUTEX;
 
-static const int MAX_CLIENTS = 2;
+internal const int MAX_CLIENTS = 2;
 internal ENetPeer* client[MAX_CLIENTS] = {};
-static int CLIENT_COUNT = 0;
+internal int CLIENT_COUNT = 0;
 
-static const int FAKE_LAG_MS = 0;
+internal const int FAKE_LAG_MS = 0;
 
 internal bool GAME_RUNNING = false;
 
-static ENetHost *server;
+internal ENetHost *server;
 
 struct Message{
 	ENetPacket* packet;
 	int clientID;
 };
 
-static std::queue<Message> CLIENT_MESSAGES;
+internal std::queue<Message> CLIENT_MESSAGES;
 
 internal int network_thread(void *ptr) {
 	ENetEvent event;
@@ -95,9 +95,9 @@ struct DelayedPacket {
 	Uint32 timeStamp;
 };
 
-static std::queue<DelayedPacket> DELAYED_PACKETS;
+internal std::queue<DelayedPacket> DELAYED_PACKETS;
 
-static void send_packet(ENetPacket* packet, ENetPeer* client) {
+internal void send_packet(ENetPacket* packet, ENetPeer* client) {
 	if(FAKE_LAG_MS == 0) {
 		enet_peer_send(client, 0, packet);
 	} else {
